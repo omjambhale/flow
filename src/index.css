@@ -1,0 +1,229 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "IBM Plex Sans", sans-serif;
+  color: #26333d;
+  background: #f5f7f9;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --navy: #19344f;
+  --teal: #31696d;
+  --green: #5a9f68;
+  --line: #dfe5e9;
+  --muted: #667783;
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  background: #f5f7f9;
+  overflow-x: clip;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100dvh;
+  overflow-x: clip;
+  overscroll-behavior-y: none;
+}
+#root {
+  min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: clip;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+a,
+select,
+input {
+  outline: none;
+}
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  box-shadow: 0 0 0 3px rgba(49, 105, 109, 0.25);
+}
+button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@layer components {
+  .surface {
+    @apply rounded-lg border border-slate-200 bg-white shadow-quiet;
+  }
+  .eyebrow {
+    @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500;
+  }
+  .label {
+    @apply text-xs font-medium text-slate-600;
+  }
+  .control {
+    @apply h-9 rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 transition hover:border-slate-300 focus:border-teal;
+  }
+  .btn-primary {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md bg-navy px-3.5 text-xs font-semibold text-white transition hover:bg-[#244665] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50;
+  }
+  .btn-ghost {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 hover:text-navy;
+  }
+  .table-wrap {
+    @apply max-w-full overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+  }
+  .data-table {
+    @apply w-full min-w-[760px] border-collapse text-left text-xs;
+  }
+  .data-table th {
+    @apply border-b border-slate-200 bg-slate-50/80 px-4 py-2.5 font-semibold text-slate-500;
+  }
+  .data-table td {
+    @apply border-b border-slate-100 px-4 py-3 text-slate-700;
+  }
+  .data-table tbody tr {
+    @apply transition hover:bg-[#F4F8F8];
+  }
+  .drawer-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .mobile-bottom-nav {
+    min-height: calc(64px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+.page-enter {
+  animation: page-enter 260ms ease-out both;
+}
+.row-enter {
+  animation: row-enter 300ms ease-out both;
+}
+.skeleton {
+  background: linear-gradient(90deg, #edf1f4 25%, #f7f9fa 50%, #edf1f4 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position-x: -200%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-odd-metrics > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .drawer-scroll > .p-5 {
+    padding: 1rem;
+  }
+
+  .surface {
+    @apply rounded-xl;
+  }
+
+  .control {
+    @apply h-11 text-base;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    @apply h-11 rounded-lg px-3 text-xs;
+  }
+
+  .btn-ghost {
+    @apply min-h-11 rounded-lg px-3 text-xs;
+  }
+
+  .page-actions > * {
+    width: 100%;
+  }
+
+  .page-actions > :only-child {
+    grid-column: 1 / -1;
+  }
+
+  .text-\[9px\] {
+    font-size: 0.6875rem;
+  }
+
+  .text-\[10px\] {
+    font-size: 0.75rem;
+  }
+
+  .text-\[11px\] {
+    font-size: 0.8125rem;
+  }
+
+  .table-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #eef2f5;
+  }
+
+  .data-table {
+    @apply text-[13px];
+  }
+
+  .data-table th {
+    @apply sticky top-0 z-[1] whitespace-nowrap px-3 py-3;
+  }
+
+  .data-table td {
+    @apply px-3 py-3.5;
+  }
+}
