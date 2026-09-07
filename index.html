@@ -487,6 +487,28 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 @media (max-width:900px){.r3{grid-template-columns:1fr}.shiftrow{grid-template-columns:1fr 1fr}.task-b{padding-left:18px}}
 
 
+/* recce: processes and per-process sub-steps */
+.wsub{display:flex;flex-direction:column;gap:2px;margin:0 0 4px 22px;border-left:1.5px solid var(--line);padding-left:8px}
+.wsub:empty{display:none}
+.wn.psub{height:38px;font-size:14px;padding:0 10px}
+.wn.psub .wnum{width:18px;height:18px;font-size:10px}
+.wn.psub.done .wnum::before{font-size:10px}
+.plist{display:grid;gap:8px;margin-bottom:8px}
+.prow{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:12px}
+.prow .pn{font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--coral)}
+.prow .in{height:48px;outline:none}
+.prow .in:focus{border-color:var(--coral)}
+.prow .rm{font-size:13px;color:var(--soft);padding:6px 8px}
+.prow .rm:hover{color:var(--ink)}
+.plist.ro .prow{grid-template-columns:34px 1fr auto}
+.plist.ro .prow .in{border-color:transparent;background:var(--warm)}
+.plist.ro .prow .rm{color:var(--mid)}
+.pstep{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.pdots{display:flex;gap:4px}
+.pdots i{width:22px;height:4px;border-radius:2px;background:var(--line)}
+.pdots i.d{background:var(--ink)}
+.pdots i.n{background:var(--coral)}
+
 /* wizard */
 .main.wide{max-width:1240px}
 .wiz{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;align-items:start}
@@ -870,8 +892,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
             <div class="pane-foot"><button class="btn small ghost" data-pane-go="workers">Back</button><button class="btn small dark" data-pane-go="media">Next</button></div>
           </div>
           <div class="pane" data-pane="media">
-            <div class="pane-h"><h2>Pictures and videos</h2><p>Enough for us to see the floor, the lighting and the kind of work.</p></div>
-            <div class="r2"><div class="f"><label>Site pictures <small>· links</small></label><div class="in ph">https://…</div><button class="addrow">+ Add another picture</button></div><div class="f"><label>Site videos <small>· optional</small></label><div class="in ph">https://…</div><button class="addrow">+ Add another video</button></div></div>
+            <div class="pane-h"><h2>Pictures and videos</h2><p>Both are required — at least one picture and one video, enough for us to see the floor, the lighting and the kind of work.</p></div>
+            <div class="r2"><div class="f"><label>Site pictures <small>· required, at least one link</small></label><div class="in ph">https://…</div><button class="addrow">+ Add another picture</button></div><div class="f"><label>Site videos <small>· required, at least one link</small></label><div class="in ph">https://…</div><button class="addrow">+ Add another video</button></div></div>
             <div class="pane-foot"><button class="btn small ghost" data-pane-go="work">Back</button><button class="btn small dark" data-pane-go="review">Next</button></div>
           </div>
           <div class="pane" data-pane="review">
@@ -901,22 +923,34 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
       <p class="sub">Fill this in after your visit. Two parts: the visit itself, then the work — recorded in the order it actually happens, from goods coming in to goods going out. Humyn reviews it task by task.</p>
       <div class="tracker"><div class="tk done"><div class="bar"></div><span>Applied</span></div><div class="tk done"><div class="bar"></div><span>Under review</span></div><div class="tk done"><div class="bar"></div><span>Agreement</span></div><div class="tk done"><div class="bar"></div><span>Sites</span></div><div class="tk now"><div class="bar"></div><span>Recce</span></div><div class="tk"><div class="bar"></div><span>Hardware custody</span></div><div class="tk"><div class="bar"></div><span>Live</span></div></div>
       <div class="wiz" id="wiz-recce">
-        <aside class="wnav"><button class="wn on" data-pane="visit"><span class="wnum">1</span><span>The visit</span></button><button class="wn" data-pane="work"><span class="wnum">2</span><span>The work, in order</span></button><button class="wn" data-pane="review"><span class="wnum">3</span><span>Review and submit</span></button></aside>
+        <aside class="wnav" id="recceNav">
+          <button class="wn on" data-pane="visit"><span class="wnum">1</span><span>The visit</span></button>
+          <button class="wn" data-pane="processes"><span class="wnum">2</span><span>Processes</span></button>
+          <button class="wn" data-pane="work"><span class="wnum">3</span><span>The work, in order</span></button>
+          <div class="wsub" id="recceSub"></div>
+          <button class="wn" data-pane="review"><span class="wnum">4</span><span>Review and submit</span></button>
+        </aside>
         <div class="panes">
           <div class="pane on" data-pane="visit">
             <div class="pane-h"><h2>The visit</h2><p>Who you met and what our operators need to know before day one.</p></div>
             <div class="r3"><div class="f"><label>Date of visit</label><div class="in ph">DD / MM / YYYY</div></div><div class="f"><label>Owner or decision-maker</label><div class="in ph">Name and role</div></div><div class="f"><label>Owner phone</label><div class="in ph ui">+91</div></div></div>
-            <div class="r2"><div class="f"><label>Has the owner agreed to recording?</label><div class="chips"><span class="chip">Yes, agreed</span><span class="chip">Not yet</span></div></div><div class="f"><label>Is there a lockable store room for hardware?</label><div class="chips"><span class="chip">Yes</span><span class="chip">No</span></div></div></div>
+            <div class="r2"><div class="f"><label>Has the owner agreed to recording?</label><div class="chips"><span class="chip">Yes, agreed</span><span class="chip">Not yet</span></div></div><div class="f"><label>Is there a lockable room on site where cameras, SD cards and power banks can be kept when not in use?</label><div class="chips"><span class="chip">Yes, lockable room available</span><span class="chip">No</span></div></div></div>
             <div class="f"><label>Entry and security procedures <small>· what our operators need to know</small></label><div class="in area ph">e.g. Photo ID at gate, visitor badge, no phones on the shop floor without approval</div></div>
             <div class="r3"><div class="f"><label>Earliest start date <small>· confirmed by factory</small></label><div class="in ph">DD / MM / YYYY</div></div><div class="f"><label>Expected output</label><div class="in ph">e.g. 400 h validated video</div></div><div class="f"><label>Tentative end date <small>· optional</small></label><div class="in ph">Leave blank if open</div></div></div>
             <div class="f"><label>Your Humyn contact</label><div class="in locked">Ashutosh Kashyap · prefilled</div></div>
-            <div class="pane-foot"><span></span><button class="btn small dark" data-pane-go="work">Next</button></div>
+            <div class="pane-foot"><span></span><button class="btn small dark" data-pane-go="processes">Next</button></div>
+          </div>
+          <div class="pane" data-pane="processes">
+            <div class="pane-h"><h2>Processes</h2><p>List the processes in the order material moves through them — start with what happens when it arrives, end with dispatch. Just the names for now; the tasks come next, one process at a time.</p></div>
+            <div class="plist" id="plist"></div>
+            <button class="addrow" id="addProc">+ Add the next process</button>
+            <div class="help" style="margin-top:8px">Most sites have 5 to 10 processes. A typical foundry: Melt → Pour → Cool → Fettle → Machine → Inspect → Pack.</div>
+            <div class="pane-foot"><button class="btn small ghost" data-pane-go="visit">Back</button><button class="btn small dark" id="procNext" data-pane-go="work" disabled>Next: fill in the tasks</button></div>
           </div>
           <div class="pane" data-pane="work">
-            <div class="pane-h"><h2>The work, in order</h2><p>Start with the first thing that happens to material when it arrives and end with dispatch. Group tasks under each process. Aim for at least 15 tasks per site, or all the work there is if fewer.</p></div>
-            <div class="proc">
-              <div class="proc-h"><span class="pn">Process 1</span><div class="in ph" style="flex:1">Name this process, e.g. Goods inward</div><span class="help">1 task</span></div>
-              <div class="task open"><div class="task-h"><span class="tn">1.1</span><div><b>Task 1</b><small>Fill in the details below</small></div><div class="siteacts"><span class="pill p-wait"><i></i>In progress</span></div></div>
+            <div class="pane-h"><div class="pstep" id="pstep"><span class="eyebrow">Process 1 of 1</span><div class="pdots" id="pdots"></div></div><h2 id="pname">The work, in order</h2><p>Every task a worker does in this process, in the order it happens. Aim for at least 15 tasks across the site, or all the work there is if fewer.</p></div>
+            <div class="proc" id="procBox">
+              <div id="taskList"><div class="task open"><div class="task-h"><span class="tn">1.1</span><div><b>Task 1</b><small>Fill in the details below</small></div><div class="siteacts"><span class="pill p-wait"><i></i>In progress</span></div></div>
               <div class="task-b">
                 <div class="r2"><div class="f"><label>What the worker does <small>· one task, in plain words</small></label><div class="in area ph">e.g. Picks a housing from the tray, presses the bearing in on the arbor press, places it on the conveyor</div></div><div class="f"><label>Area in the factory</label><div class="in ph">e.g. Assembly line B, station 3</div></div></div>
                 <div class="r3"><div class="f"><label>Environment category</label><div class="combo" data-combo="l1" data-value=""></div></div><div class="f"><label>Environment type</label><div class="in ph">e.g. Automotive parts factory</div></div><div class="f"><label>Scene</label><div class="in ph">e.g. Assembly line</div></div></div>
@@ -925,10 +959,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
                 <div class="f"><label>Photos or video of this task <small>· at least one</small></label><div class="in ph">https://…</div><button class="addrow">+ Add another link</button></div>
                 <div class="task-foot"><button class="btn small ghost">Remove task</button><div style="display:flex;gap:10px"><button class="btn small ghost">Add task, same environment</button><button class="btn small dark">Done with this task</button></div></div>
               </div></div>
-              <button class="addrow">+ Add a task to this process</button>
+              </div>
+              <button class="addrow" id="addTask">+ Add a task to this process</button>
             </div>
-            <button class="addsite">+ Add the next process</button>
-            <div class="pane-foot"><button class="btn small ghost" data-pane-go="visit">Back</button><button class="btn small dark" data-pane-go="review">Next</button></div>
+            <div class="pane-foot"><button class="btn small ghost" id="procBack">Back</button><button class="btn small dark" id="procDone">Done with this process → next</button></div>
           </div>
           <div class="pane" data-pane="review">
             <div class="pane-h"><h2>Review and submit</h2><p>Check the summary, then submit. Humyn reviews each task and you'll see accepted or rejected, with the reason, on this site's page.</p></div>
@@ -936,10 +970,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
               <div><span class="k">Visit</span><span class="v">—</span></div>
               <div><span class="k">Owner agreed</span><span class="v">—</span></div>
               <div><span class="k">Earliest start</span><span class="v">—</span></div>
-              <div><span class="k">Processes</span><span class="v">1</span></div>
-              <div><span class="k">Tasks</span><span class="v">1</span></div>
+              <div><span class="k">Processes</span><span class="v" id="sumProcs">—</span></div>
+              <div><span class="k">Tasks</span><span class="v" id="sumTasks">—</span></div>
               <div><span class="k">Photos</span><span class="v">—</span></div>
             </div>
+            <div class="plist ro" id="plistReview"></div>
             <div class="pane-foot"><button class="btn small ghost" data-pane-go="work">Back</button><button class="btn" id="submitRecce" data-go="13">Submit recce</button></div>
           </div>
         </div>
@@ -1329,7 +1364,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     var top = wiz.getBoundingClientRect().top + window.scrollY - 110; if (window.scrollY > top) window.scrollTo(0, top);
   }
   document.addEventListener('click', function(e){
-    var n = e.target.closest('.wn'); if (n) { paneGo(n.closest('.wiz'), n.dataset.pane, false); return; }
+    var n = e.target.closest('.wn'); if (n) { if (n.dataset.pane) paneGo(n.closest('.wiz'), n.dataset.pane, false); return; }
     var g = e.target.closest('[data-pane-go]'); if (g && !g.disabled) { var w = g.closest('.wiz'); var forward = g.classList.contains('dark'); paneGo(w, g.dataset.paneGo, forward); }
   });
   function fillSiteSummary(wiz){
@@ -1384,6 +1419,66 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     var names=['Applied','Under review','Agreement','Sites','Recce','Hardware custody','Live']; var i=names.indexOf(now);
     document.querySelectorAll('#trk13 .tk').forEach(function(t,k){ t.classList.remove('done','now'); if (k<i) t.classList.add('done'); if (k===i) t.classList.add('now'); });
   }
+
+  /* ---------- recce: processes first, then one process at a time ---------- */
+  (function(){
+    var wiz = document.getElementById('wiz-recce'); if (!wiz) return;
+    var TASK_HTML = document.getElementById('taskList').innerHTML;
+    var procs = [];            // {name:'', tasks: html}
+    var cur = 0;
+    var plist = document.getElementById('plist'), sub = document.getElementById('recceSub');
+    function addProc(name){ procs.push({ name: name || '', tasks: TASK_HTML, done: false }); render(); var last = plist.querySelector('.prow:last-child .in'); if (last && !name) last.focus(); }
+    function render(){
+      plist.innerHTML = procs.map(function(p, i){ return '<div class="prow" data-i="'+i+'"><span class="pn">'+(i+1)+'</span><div class="in editable'+(p.name?'':' ph')+'" contenteditable="true" spellcheck="false" data-ph="Name this process, e.g. Goods inward">'+(p.name || 'Name this process, e.g. Goods inward')+'</div><button class="rm" title="Remove">Remove</button></div>'; }).join('');
+      sub.innerHTML = procs.map(function(p, i){ return '<button class="wn psub'+(p.done?' done':'')+(i===cur && wiz.querySelector('.pane[data-pane=\'work\']').classList.contains('on')?' on':'')+'" data-proc="'+i+'"><span class="wnum">'+(i+1)+'</span><span>'+(p.name || 'Process '+(i+1))+'</span></button>'; }).join('');
+      var named = procs.filter(function(p){ return p.name; }).length;
+      document.getElementById('procNext').disabled = named === 0;
+      var rv = document.getElementById('plistReview'); if (rv) rv.innerHTML = procs.map(function(p, i){ var n = (p.tasks.match(/class="task( open)?"/g)||[]).length; return '<div class="prow"><span class="pn">'+(i+1)+'</span><div class="in">'+(p.name||'Process '+(i+1))+'</div><span class="rm">'+n+' task'+(n===1?'':'s')+(p.done?' · done':' · not done')+'</span></div>'; }).join('');
+      var sp = document.getElementById('sumProcs'); if (sp) sp.textContent = procs.length || '—';
+      var st = document.getElementById('sumTasks'); if (st) st.textContent = procs.reduce(function(a,p){ return a + (p.tasks.match(/class="task( open)?"/g)||[]).length; }, 0) || '—';
+    }
+    function saveCur(){ if (procs[cur]) procs[cur].tasks = document.getElementById('taskList').innerHTML; }
+    function showProc(i){
+      cur = i; var p = procs[i]; if (!p) return;
+      document.getElementById('taskList').innerHTML = p.tasks;
+      document.getElementById('taskList').querySelectorAll('.combo').forEach(buildCombo);
+      document.getElementById('taskList').querySelectorAll('.task').forEach(function(t, k){ t.querySelector('.tn').textContent = (i+1)+'.'+(k+1); t.querySelector('.task-h b').textContent = 'Task '+(k+1); });
+      document.getElementById('pname').textContent = p.name || 'Process ' + (i+1);
+      document.querySelector('#pstep .eyebrow').textContent = 'Process ' + (i+1) + ' of ' + procs.length + (p.done ? ' · done' : '');
+      document.getElementById('pdots').innerHTML = procs.map(function(q, k){ return '<i class="'+(k===i?'n':q.done?'d':'')+'"></i>'; }).join('');
+      var last = i === procs.length - 1;
+      document.getElementById('procDone').textContent = last ? 'Done with this process → review' : 'Done with this process → next: ' + (procs[i+1].name || 'Process ' + (i+2));
+      document.getElementById('procBack').textContent = i === 0 ? 'Back to processes' : '← ' + (procs[i-1].name || 'Process ' + i);
+      render();
+    }
+    // process list editing
+    plist.addEventListener('focusin', function(e){ var el = e.target.closest('.in'); if (el && el.classList.contains('ph')) { el.textContent = ''; el.classList.remove('ph'); } });
+    plist.addEventListener('input', function(e){ var row = e.target.closest('.prow'); if (!row) return; procs[+row.dataset.i].name = e.target.textContent.trim(); sub.querySelectorAll('.wn.psub')[+row.dataset.i].lastElementChild.textContent = procs[+row.dataset.i].name || 'Process '+(+row.dataset.i+1); document.getElementById('procNext').disabled = !procs.some(function(p){ return p.name; }); });
+    plist.addEventListener('focusout', function(e){ var el = e.target.closest('.in'); if (el && !el.textContent.trim()) { el.classList.add('ph'); el.textContent = el.dataset.ph; } });
+    plist.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); var row = e.target.closest('.prow'); if (row && +row.dataset.i === procs.length - 1 && procs[procs.length-1].name) addProc(); else { var nx = plist.querySelectorAll('.prow .in')[+row.dataset.i+1]; if (nx) nx.focus(); } } });
+    plist.addEventListener('click', function(e){ var rm = e.target.closest('.rm'); if (!rm) return; var i = +rm.closest('.prow').dataset.i; procs.splice(i, 1); if (!procs.length) addProc(); else render(); });
+    document.getElementById('addProc').addEventListener('click', function(){ addProc(); });
+    // sub-menu navigation
+    sub.addEventListener('click', function(e){ var b = e.target.closest('.wn.psub'); if (!b) return; saveCur(); paneGo(wiz, 'work', false); showProc(+b.dataset.proc); });
+    // entering the work pane from the menu/next
+    wiz.addEventListener('click', function(e){
+      var g = e.target.closest('[data-pane-go="work"], .wn[data-pane="work"]'); if (g) { procs = procs.filter(function(p, i){ return p.name || i === 0; }); if (!procs.length) addProc('Process 1'); setTimeout(function(){ showProc(Math.min(cur, procs.length-1)); }, 0); }
+      var w = e.target.closest('.wn[data-pane="processes"], [data-pane-go="processes"]'); if (w) { saveCur(); setTimeout(render, 0); }
+      var r = e.target.closest('.wn[data-pane="review"], [data-pane-go="review"]'); if (r) { saveCur(); setTimeout(render, 0); }
+    });
+    document.getElementById('addTask').addEventListener('click', function(){
+      var list = document.getElementById('taskList'); var n = list.querySelectorAll('.task').length + 1;
+      list.querySelectorAll('.task').forEach(function(t){ t.classList.remove('open'); var pl = t.querySelector('.pill'); if (pl) { pl.className = 'pill p-ok'; pl.innerHTML = '<i></i>Done'; } });
+      var d = document.createElement('div'); d.innerHTML = TASK_HTML; var t = d.firstElementChild; t.querySelector('.tn').textContent = (cur+1)+'.'+n; t.querySelector('.task-h b').textContent = 'Task '+n; list.appendChild(t); t.querySelectorAll('.combo').forEach(buildCombo); t.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+    document.getElementById('procDone').addEventListener('click', function(){
+      saveCur(); procs[cur].done = true;
+      if (cur < procs.length - 1) { showProc(cur + 1); window.scrollTo({top: wiz.getBoundingClientRect().top + window.scrollY - 110, behavior:'smooth'}); }
+      else { render(); var wn = wiz.querySelector('.wn[data-pane="work"]'); wn.classList.add('done'); paneGo(wiz, 'review', true); }
+    });
+    document.getElementById('procBack').addEventListener('click', function(){ saveCur(); if (cur === 0) paneGo(wiz, 'processes', false); else showProc(cur - 1); });
+    addProc();
+  })();
   document.addEventListener('click', function(e){
     if (!e.target.closest('#submitRecce')) return;
     var card = [].slice.call(document.querySelectorAll('#siteres .sr')).find(function(c){ return c.dataset.state === 'approved'; });
