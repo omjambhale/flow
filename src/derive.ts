@@ -66,6 +66,7 @@ export const siteTarget = (s: Site) => s.process.steps.reduce((sum, st) => sum +
 export const siteRecordings = (d: Dataset, siteId: string) => d.recordings.filter(r => r.siteId === siteId)
 
 export const siteHealth = (d: Dataset, s: Site): SiteHealth => {
+  if (s.stage === 'closed') return 'closed'
   if (s.stage !== 'live') return 'setting-up'
   if (s.paused) return 'paused'
   const sum = summarise(thisWeek(siteRecordings(d, s.id)))
@@ -74,11 +75,11 @@ export const siteHealth = (d: Dataset, s: Site): SiteHealth => {
 }
 
 export const healthLabel: Record<SiteHealth, string> = {
-  collecting: 'Collecting', 'setting-up': 'Setting up', paused: 'Paused', attention: 'Needs attention',
+  collecting: 'Collecting', 'setting-up': 'Setting up', paused: 'Paused', attention: 'Needs attention', closed: 'Completed',
 }
 
 export const stageLabel: Record<Site['stage'], string> = {
-  review: 'Humyn is reviewing the site', recce: 'Humyn is reviewing the recce', hardware: 'Hardware on its way', live: 'Live',
+  review: 'Humyn is reviewing the site', recce: 'Humyn is reviewing the recce', hardware: 'Hardware on its way', live: 'Live', closed: 'Completed',
 }
 
 export const attentionReasons = (d: Dataset, s: Site): string[] => {

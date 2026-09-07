@@ -10,8 +10,9 @@ export type SiteStage =
   | 'recce'       // recce submitted / reviewing
   | 'hardware'    // hardware custody in progress
   | 'live'        // collecting
+  | 'closed'      // collection finished; kept for history
 
-export type SiteHealth = 'collecting' | 'setting-up' | 'paused' | 'attention'
+export type SiteHealth = 'collecting' | 'setting-up' | 'paused' | 'attention' | 'closed'
 
 export interface Task {
   id: string
@@ -51,6 +52,10 @@ export interface Site {
   scheduledToday: number
   presentToday: number
   startedOn: string
+  /** for closed sites */
+  closedOn?: string
+  finalHours?: number
+  paidTotal?: number
 }
 
 export interface Person {

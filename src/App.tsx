@@ -9,6 +9,7 @@ import { RecordingPage } from './pages/Recording'
 import { Performance, Workers, ReasonList } from './pages/Performance'
 import { Hardware } from './pages/Hardware'
 import { Profile } from './pages/Profile'
+import { Help } from './pages/Help'
 
 // One viewer: the partner. Supervisors and operators use the phone apps, not this dashboard.
 const Ctx = createContext<{ data: Dataset }>({ data: dataset })
@@ -16,15 +17,15 @@ export const useApp = () => useContext(Ctx)
 
 const TABS = [
   { to: '/sites', label: 'Sites' },
-  { to: '/hardware', label: 'Hardware' },
-  { to: '/performance', label: 'Performance' },
   { to: '/payments', label: 'Payments' },
-  { to: '/profile', label: 'My Profile' },
+  { to: '/performance', label: 'Performance' },
+  { to: '/hardware', label: 'Hardware' },
+  { to: '/help', label: 'Help & SOPs' },
 ]
 const HOME = '/sites'
 
 const activeTab = (path: string) =>
-  path.startsWith('/payments') ? '/payments' : path.startsWith('/performance') ? '/performance' : path.startsWith('/profile') ? '/profile' : path.startsWith('/hardware') ? '/hardware' : '/sites'
+  path.startsWith('/payments') ? '/payments' : path.startsWith('/performance') ? '/performance' : path.startsWith('/help') ? '/help' : path.startsWith('/hardware') ? '/hardware' : path.startsWith('/profile') ? '' : '/sites'
 
 const KIND_COLOUR = { ops: '#C43D2F', quality: '#D98E04', hardware: '#383532', payment: '#2F8F5B' }
 const ago = (m: number) => m < 60 ? `${m} min ago` : m < 1440 ? `${Math.floor(m / 60)} h ago` : `${Math.floor(m / 1440)} d ago`
@@ -43,8 +44,7 @@ function Shell({ children }: { children: ReactNode }) {
             {TABS.map(t => <Link key={t.to} to={t.to} className={`tab ${activeTab(path) === t.to ? 'on' : ''}`}>{t.label}</Link>)}
           </nav>
           <div className="hdr-right">
-            <span className="sample">Sample data</span>
-            <div className="who"><b>{data.partner.ownerName}</b><span>{data.partner.org}</span></div>
+            <Link to="/profile" className={`who ${path.startsWith('/profile') ? 'on' : ''}`} title="Your profile"><b>{data.partner.ownerName}</b><span>{data.partner.org}</span></Link>
             <button className="bell" aria-label="Notifications" onClick={() => setOpen(o => !o)}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
               {unread > 0 && <b>{unread}</b>}
@@ -100,6 +100,7 @@ function Crumbs() {
   } else if (path === '/performance/workers') parts.push({ to: '/performance', label: 'Performance' }, { label: 'Workers' })
   else if ((m = match('/performance/reason/:i', path))) parts.push({ to: '/performance', label: 'Performance' }, { label: 'Needs work' })
   else if ((m = match('/hardware/:id', path))) parts.push({ to: '/hardware', label: 'Hardware' }, { label: site(m.id)?.name ?? m.id })
+  else if (path === '/profile') parts.push({ to: '/sites', label: data.partner.org }, { label: 'Your profile' })
   if (parts.length < 2) return <div className="crumbs" />
   return (
     <div className="crumbs">
@@ -134,6 +135,7 @@ function Routes() {
   if (path === '/performance/workers') return <Workers />
   if ((m = match('/performance/reason/:i', path))) return <ReasonList index={Number(m.i)} />
   if (path === '/profile') return <Profile />
+  if (path === '/help') return <Help />
   return <div className="empty"><b>Page not found</b><Link to={HOME}>Go to Sites</Link></div>
 }
 

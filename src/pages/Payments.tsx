@@ -1,18 +1,17 @@
 import { useApp } from '../App'
 import { Card, Chip, Empty, Kpi, PageH, Row, toneOf } from '../components/ui'
-import { fmtDate, fmtHours, fmtINR, invoiceDeductions, invoiceGross, invoiceNet, invoiceRejectedHours, invoiceStatusLabel, money, titleOf, weeklyAccepted } from '../derive'
+import { fmtDate, fmtHours, fmtINR, invoiceDeductions, invoiceGross, invoiceNet, invoiceRejectedHours, invoiceStatusLabel, money, titleOf } from '../derive'
 
 export function Payments() {
   const { data } = useApp()
   const m = money(data)
-  const trend = weeklyAccepted(data.recordings)
   const order = ['review', 'disputed', 'scheduled', 'submitted', 'draft', 'paid']
   const invoices = [...m.invoices].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status) || (b.to > a.to ? 1 : -1))
   return (
     <>
       <PageH title="Payments" sub="Every rupee here traces back to a recording Humyn accepted." />
       <div className="kpis k3">
-        <Kpi label="Paid so far" value={fmtINR(m.paid)} sub="since you joined" spark={trend} />
+        <Kpi label="Paid so far" value={fmtINR(m.paid)} sub="since you joined" />
         <Kpi label="Payable now" value={fmtINR(m.payable)} sub={m.next ? `next payout ${fmtDate(m.next)}` : 'nothing scheduled yet'} />
         <Kpi label="Under review" value={fmtINR(m.review)} sub="Humyn is checking these hours" />
       </div>

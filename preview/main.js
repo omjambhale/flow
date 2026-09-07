@@ -12748,11 +12748,11 @@
   });
 
   // src/main.tsx
-  var import_react6 = __toESM(require_react(), 1);
+  var import_react7 = __toESM(require_react(), 1);
   var import_client = __toESM(require_client(), 1);
 
   // src/App.tsx
-  var import_react5 = __toESM(require_react(), 1);
+  var import_react6 = __toESM(require_react(), 1);
 
   // src/router.tsx
   var import_react = __toESM(require_react(), 1);
@@ -12910,6 +12910,40 @@
       scheduledToday: 0,
       presentToday: 0,
       startedOn: ""
+    },
+    {
+      id: "HL006",
+      name: "Vijaya Auto Pressings",
+      city: "Peenya",
+      state: "Karnataka",
+      type: "Sheet-metal stamping",
+      stage: "closed",
+      ratePerHour: 400,
+      process: stamping,
+      uploadLagMin: 0,
+      scheduledToday: 0,
+      presentToday: 0,
+      startedOn: "2026-04-06",
+      closedOn: "2026-06-28",
+      finalHours: 812,
+      paidTotal: 324800
+    },
+    {
+      id: "HL009",
+      name: "Meenakshi Textiles",
+      city: "Tiruppur",
+      state: "Tamil Nadu",
+      type: "Textile and garments",
+      stage: "closed",
+      ratePerHour: 390,
+      process: textile,
+      uploadLagMin: 0,
+      scheduledToday: 0,
+      presentToday: 0,
+      startedOn: "2026-05-11",
+      closedOn: "2026-07-19",
+      finalHours: 640,
+      paidTotal: 249600
     }
   ];
   var people = [];
@@ -13322,6 +13356,7 @@
   var siteTarget = (s) => s.process.steps.reduce((sum, st) => sum + stepExpected(st), 0);
   var siteRecordings = (d, siteId) => d.recordings.filter((r2) => r2.siteId === siteId);
   var siteHealth = (d, s) => {
+    if (s.stage === "closed") return "closed";
     if (s.stage !== "live") return "setting-up";
     if (s.paused) return "paused";
     const sum = summarise(thisWeek(siteRecordings(d, s.id)));
@@ -13332,13 +13367,15 @@
     collecting: "Collecting",
     "setting-up": "Setting up",
     paused: "Paused",
-    attention: "Needs attention"
+    attention: "Needs attention",
+    closed: "Completed"
   };
   var stageLabel = {
     review: "Humyn is reviewing the site",
     recce: "Humyn is reviewing the recce",
     hardware: "Hardware on its way",
-    live: "Live"
+    live: "Live",
+    closed: "Completed"
   };
   var invoiceRejectedHours = (i) => i.adjustments.reduce((s, a2) => s + a2.hours, 0);
   var invoiceGross = (i) => (i.approvedHours + invoiceRejectedHours(i)) * i.ratePerHour;
@@ -13351,18 +13388,6 @@
     const review = inv.filter((i) => i.status === "review" || i.status === "disputed").reduce((s, i) => s + invoiceNet(i), 0);
     const next = inv.filter((i) => i.status === "scheduled").map((i) => i.expectedPaymentOn).sort()[0];
     return { paid, payable, review, next, invoices: inv };
-  };
-  var weeklyAccepted = (recs, n2 = 6) => {
-    const out = [];
-    for (let w = n2 - 1; w >= 0; w--) {
-      const end = /* @__PURE__ */ new Date(TODAY + "T00:00:00Z");
-      end.setUTCDate(end.getUTCDate() - w * 7);
-      const start = new Date(end);
-      start.setUTCDate(start.getUTCDate() - 7);
-      const a2 = start.toISOString().slice(0, 10), b = end.toISOString().slice(0, 10);
-      out.push(hrs(recs.filter((r2) => isGood(r2) && r2.date > a2 && r2.date <= b).reduce((s, r2) => s + r2.minutes, 0)));
-    }
-    return out;
   };
   var statusLabel = {
     uploading: "Uploading",
@@ -13378,28 +13403,6 @@
     scheduled: "Scheduled",
     paid: "Paid",
     disputed: "Disputed"
-  };
-  var weekLabels = (n2 = 6) => {
-    const out = [];
-    for (let w = n2 - 1; w >= 0; w--) {
-      const end = /* @__PURE__ */ new Date(TODAY + "T00:00:00Z");
-      end.setUTCDate(end.getUTCDate() - w * 7);
-      out.push(w === 0 ? "This week" : end.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" }));
-    }
-    return out;
-  };
-  var weeklyFunnel = (recs, n2 = 6) => {
-    const out = [];
-    for (let w = n2 - 1; w >= 0; w--) {
-      const end = /* @__PURE__ */ new Date(TODAY + "T00:00:00Z");
-      end.setUTCDate(end.getUTCDate() - w * 7);
-      const start = new Date(end);
-      start.setUTCDate(start.getUTCDate() - 7);
-      const a2 = start.toISOString().slice(0, 10), b = end.toISOString().slice(0, 10);
-      const inW = recs.filter((r2) => r2.date > a2 && r2.date <= b);
-      out.push({ accepted: hrs(inW.filter(isGood).reduce((s, r2) => s + r2.minutes, 0)), rejected: hrs(inW.filter((r2) => r2.status === "rejected").reduce((s, r2) => s + r2.minutes, 0)) });
-    }
-    return out;
   };
   var byReason = (recs) => {
     const m = /* @__PURE__ */ new Map();
@@ -13442,13 +13445,12 @@
   function Payments() {
     const { data } = useApp();
     const m = money(data);
-    const trend = weeklyAccepted(data.recordings);
     const order = ["review", "disputed", "scheduled", "submitted", "draft", "paid"];
     const invoices2 = [...m.invoices].sort((a2, b) => order.indexOf(a2.status) - order.indexOf(b.status) || (b.to > a2.to ? 1 : -1));
     return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(PageH, { title: "Payments", sub: "Every rupee here traces back to a recording Humyn accepted." }),
       /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "kpis k3", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Kpi, { label: "Paid so far", value: fmtINR(m.paid), sub: "since you joined", spark: trend }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Kpi, { label: "Paid so far", value: fmtINR(m.paid), sub: "since you joined" }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Kpi, { label: "Payable now", value: fmtINR(m.payable), sub: m.next ? `next payout ${fmtDate(m.next)}` : "nothing scheduled yet" }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Kpi, { label: "Under review", value: fmtINR(m.review), sub: "Humyn is checking these hours" })
       ] }),
@@ -13577,48 +13579,6 @@
   var import_react2 = __toESM(require_react(), 1);
   var import_jsx_runtime4 = __toESM(require_jsx_runtime(), 1);
   var C = { coral: "#FF6E42", ink: "#161516", mute: "#7A7672", line: "#E6E2DD", grid: "#EFECE8", green: "#2F8F5B", amber: "#D98E04", red: "#C43D2F", soft: "#FFD1C0" };
-  var W = 600;
-  function Bars({ data, height = 160, format = (v) => String(v), subLabel, valueLabel }) {
-    const [hover, setHover] = (0, import_react2.useState)(null);
-    const w = W / Math.max(1, data.length);
-    const max = Math.max(1, ...data.map((d) => d.value + (d.sub ?? 0)));
-    const ticks = [0, 0.5, 1].map((t) => Math.round(max * t));
-    return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "chart", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { viewBox: `0 0 ${W} ${height}`, style: { width: "100%", height: "auto" }, onMouseLeave: () => setHover(null), children: [
-        ticks.map((t) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("line", { x1: "0", x2: W, y1: height - 22 - t / max * (height - 34), y2: height - 22 - t / max * (height - 34), stroke: C.grid, strokeWidth: "1" }, t)),
-        data.map((d, i) => {
-          const h = d.value / max * (height - 34);
-          const hs = (d.sub ?? 0) / max * (height - 34);
-          const x = i * w + w * 0.22, bw = w * 0.56;
-          const y = height - 22 - h;
-          const on = hover === i;
-          return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("g", { onMouseEnter: () => setHover(i), style: { cursor: d.to ? "pointer" : "default" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x: i * w, y: "0", width: w, height, fill: "transparent" }),
-            hs > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x, y: y - hs - 2, width: bw, height: hs, fill: C.soft, rx: "3" }),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x, y, width: bw, height: h, fill: d.tone ?? C.coral, rx: "3", opacity: hover === null || on ? 1 : 0.45 })
-          ] }, i);
-        })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "chart-x", children: data.map((d, i) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: { width: `${w / W * 100}%` }, className: hover === i ? "on" : "", children: d.to ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Link, { to: d.to, children: d.label }) : d.label }, i)) }),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "chart-tip", children: hover !== null ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("b", { children: data[hover].label }),
-        " \xB7 ",
-        valueLabel ?? "",
-        " ",
-        format(data[hover].value),
-        data[hover].sub !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-          " \xB7 ",
-          subLabel ?? "",
-          " ",
-          format(data[hover].sub)
-        ] }) : "",
-        data[hover].hint ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-          " \xB7 ",
-          data[hover].hint
-        ] }) : ""
-      ] }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "muted", children: "Hover a bar" }) })
-    ] });
-  }
   function HBars({ data, format = (v) => String(v), max: maxIn }) {
     const max = maxIn ?? Math.max(1, ...data.map((d) => d.value));
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "hbars", children: data.map((d, i) => {
@@ -13657,30 +13617,23 @@
     const { data } = useApp();
     const order = { attention: 0, collecting: 1, paused: 2, "setting-up": 3 };
     const live = data.sites.filter((s) => s.stage === "live").sort((a2, b) => order[siteHealth(data, a2)] - order[siteHealth(data, b)]);
-    const onboarding = data.sites.filter((s) => s.stage !== "live");
+    const onboarding = data.sites.filter((s) => s.stage !== "live" && s.stage !== "closed");
+    const past = data.sites.filter((s) => s.stage === "closed");
     const week = summarise(thisWeek(data.recordings));
     const cams = data.assets.filter((a2) => a2.type === "camera" && a2.status !== "transit");
     const camsOn = cams.filter((a2) => a2.status === "in-use").length;
     const risk = assetsAtRisk(data);
     const lagSites = live.filter((s) => s.uploadLagMin > 1440).length;
     const present = live.reduce((s, x) => s + x.presentToday, 0), sched = live.reduce((s, x) => s + x.scheduledToday, 0);
-    const problems = live.filter((s) => siteHealth(data, s) === "attention").length;
     return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(PageH, { title: "Sites", sub: `${live.length} live \xB7 ${onboarding.length} setting up`, right: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Link, { to: "/", className: "btn ghost", children: "+ Add a site" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(PageH, { title: "Sites", sub: `${live.length} live \xB7 ${onboarding.length} setting up`, right: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("a", { href: "/", className: "btn ghost", children: "+ Add a site" }) }),
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "kpis", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Accepted this week", value: fmtHours(week.acceptedHours), spark: weeklyAccepted(data.recordings), to: "/performance" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Accepted this week", value: fmtHours(week.acceptedHours), sub: `${fmtHours(summarise(data.recordings).acceptedHours)} all time`, to: "/performance" }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Acceptance", value: `${week.acceptance}%`, tone: accTone(week.acceptance), sub: `${week.bad} need work`, to: "/performance" }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Present today", value: present, sub: `of ${sched}`, tone: presTone(present, sched) }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Cameras recording", value: `${camsOn}/${cams.length}`, tone: camsOn < cams.length ? "amber" : void 0, to: "/hardware" }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Upload behind", value: lagSites, sub: lagSites ? "sites > 1 day" : "all synced", tone: lagSites ? "red" : void 0 }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Hardware at risk", value: fmtINR(assetValue(risk)), sub: `${risk.length} items`, tone: risk.length ? "red" : void 0, to: "/hardware" })
-      ] }),
-      problems > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "eyebrow", style: { marginBottom: 8, color: "var(--red)" }, children: [
-        "\u25CF ",
-        problems,
-        " site",
-        problems > 1 ? "s need" : " needs",
-        " attention"
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "sites", children: [
         live.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Card, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Empty, { title: "No live sites yet" }) }),
@@ -13692,6 +13645,37 @@
           onboarding.length
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "onb", children: onboarding.map((s) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(OnboardingRow, { site: s }, s.id)) })
+      ] }),
+      past.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("details", { className: "card fold mt past", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("summary", { children: [
+          "Past sites \xB7 ",
+          past.length
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "list", children: past.map((s) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(Link, { to: `/sites/${s.id}`, className: "row", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "dot grey" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "main", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "t", children: s.name }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "s", children: [
+              s.city,
+              " \xB7 ",
+              s.type,
+              " \xB7 ",
+              fmtDate(s.startedOn),
+              " \u2013 ",
+              fmtDate(s.closedOn)
+            ] })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "end", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("b", { children: [
+              fmtHours(s.finalHours ?? 0),
+              " accepted"
+            ] }),
+            fmtINR(s.paidTotal ?? 0),
+            " paid \xB7 ",
+            s.id
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "arrow", children: "\u203A" })
+        ] }, s.id)) })
       ] })
     ] });
   }
@@ -13763,10 +13747,23 @@
     const camsOn = site.stage === "live" ? cams.filter((a2) => a2.status === "in-use").length : 0;
     const steps = site.process.steps;
     const cur = steps.find((st) => stepDone(recs, st) < stepExpected(st));
+    const behind = [...steps].sort((a2, b) => stepDone(recs, a2) / stepExpected(a2) - stepDone(recs, b) / stepExpected(b))[0];
     const workers2 = workerStats(data, recs).sort((a2, b) => b.acceptedHours - a2.acceptedHours);
     const ops = data.people.filter((p) => p.siteId === site.id && p.role === "operator" && p.active);
     const bad = recs.filter((r2) => r2.status === "rejected").sort((a2, b) => b.date.localeCompare(a2.date));
     const reasons2 = byReason(thisWeek(recs));
+    if (site.stage === "closed") {
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(PageH, { title: site.name, sub: `${site.id} \xB7 ${site.city}, ${site.state} \xB7 ${site.type} \xB7 ${fmtDate(site.startedOn)} \u2013 ${fmtDate(site.closedOn)}`, right: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Chip, { tone: "grey", children: "Completed" }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "kpis k4", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Accepted", value: fmtHours(site.finalHours ?? 0), sub: "all time" }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Paid", value: fmtINR(site.paidTotal ?? 0), sub: `${fmtINR(site.ratePerHour)} per hour` }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Process", value: site.process.name, sub: `${steps.length} steps` }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Hardware", value: "Returned", sub: "custody closed" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Card, { title: "Steps in this process", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "cpad", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(HBars, { data: steps.map((st) => ({ label: `${st.order}. ${st.name}`, value: stepExpected(st) })), format: (v) => `${v}h` }) }) })
+      ] });
+    }
     if (site.stage !== "live") {
       return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(PageH, { title: site.name, sub: `${site.id} \xB7 ${site.city}, ${site.state} \xB7 ${site.type}`, right: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Chip, { tone: "amber", children: stageLabel[site.stage] }) }),
@@ -13800,10 +13797,9 @@
         "Process map ",
         /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "muted small", children: [
           "\xB7 ",
-          site.process.name,
-          " \xB7 click a step for its tasks"
+          site.process.name
         ] })
-      ] }), className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "chain", style: { padding: "14px 18px 16px" }, children: steps.map((st) => {
+      ] }), action: behind ? { to: `/sites/${site.id}/step/${behind.id}`, label: `Furthest behind: ${behind.name} \xB7 ${Math.round(stepDone(recs, behind))}h of ${stepExpected(behind)}h` } : void 0, className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "chain", style: { padding: "14px 18px 16px" }, children: steps.map((st) => {
         const exp = stepExpected(st), d = stepDone(recs, st);
         const state = d >= exp ? "done" : d > 0 ? "behind" : "";
         return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(Link, { to: `/sites/${site.id}/step/${st.id}`, className: `stepc ${state} ${cur?.id === st.id ? "cur" : ""}`, children: [
@@ -14243,7 +14239,6 @@
     const delta = s.acceptance - last.acceptance;
     const lost = recs.filter((r2) => r2.status === "rejected").reduce((sum, r2) => sum + r2.minutes / 60 * (data.sites.find((x) => x.id === r2.siteId)?.ratePerHour ?? 0), 0);
     const reasons2 = byReason(recs);
-    const funnel = weeklyFunnel(data.recordings, 5);
     const live = data.sites.filter((x) => x.stage === "live");
     const bySite = live.map((site) => {
       const ss = summarise(recs.filter((r2) => r2.siteId === site.id));
@@ -14273,19 +14268,22 @@
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Kpi, { label: "Weakest score", value: weakest[0].toUpperCase() + weakest.slice(1), sub: `${scores[weakest]} / 100`, tone: scoreTone(scores[weakest]) === "green" ? void 0 : scoreTone(scores[weakest]) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "cgrid mb", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "Accepted vs rejected hours \xB7 6 weeks", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Bars, { data: funnel.map((f, i) => ({ label: weekLabels(5)[i], value: f.accepted, sub: f.rejected })), format: (v) => fmtHours(v), valueLabel: "accepted", subLabel: "rejected" }) }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "Why hours were rejected", action: reasons2.length ? { to: "/performance/reason/0", label: "See recordings" } : void 0, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: reasons2.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: reasons2.map((r2, i) => ({ label: r2.reason, value: r2.hours, to: `/performance/reason/${i}`, hint: `${r2.count} recordings` })), format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "Nothing rejected" }) }) })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "cgrid mb", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "Why hours were rejected", action: reasons2.length ? { to: "/performance/reason/0", label: "See recordings" } : void 0, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: reasons2.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: reasons2.map((r2, i) => ({ label: r2.reason, value: r2.hours, to: `/performance/reason/${i}`, hint: `${r2.count} recordings` })), format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "Nothing rejected" }) }) }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "The three scores", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ring-wrap", style: { padding: "18px" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Ring, { value: s.acceptance, size: 150 }),
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ScoreBars, { ...scores })
-        ] }) }),
+        ] }) })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "cgrid mb", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Card, { title: "Acceptance by site", children: [
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: bySite, format: (v) => `${v}%`, max: 100 }) }),
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "card-h", style: { borderTop: "1px solid var(--line)", borderBottom: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { style: { fontSize: 14 }, children: "Weakest steps" }) }),
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: byStep.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: byStep, format: (v) => `${v}%`, max: 100 }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "Not enough recordings yet" }) })
-        ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "Rejected hours by operator \xB7 30 days", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: data.people.filter((p) => p.role === "operator" && p.active).map((p) => {
+          const rr = data.recordings.filter((r2) => r2.operatorId === p.id && r2.date > monthStart && r2.status === "rejected");
+          return { label: `${p.name} \xB7 ${shortName(data.sites.find((x) => x.id === p.siteId)?.name ?? "")}`, value: Math.round(rr.reduce((t, r2) => t + r2.minutes, 0) / 6) / 10, to: `/sites/${p.siteId}/operator/${p.id}`, hint: `${rr.length} recordings` };
+        }).sort((a2, b) => b.value - a2.value), format: (v) => fmtHours(v) }) }) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: `Workers who need help \xB7 ${weak.length}`, action: { to: "/performance/workers", label: `All ${workers2.length} workers` }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("table", { className: "tbl", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("tr", { children: [
@@ -14505,7 +14503,7 @@
       setTick(tick + 1);
     };
     return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(PageH, { title: "My Profile", sub: `${data.partner.ownerName} \xB7 ${data.partner.org} \xB7 partner since ${fmtDate(data.partner.since)}` }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(PageH, { title: "Your profile", sub: `${data.partner.ownerName} \xB7 ${data.partner.org} \xB7 partner since ${fmtDate(data.partner.since)}` }),
       /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "grid2", children: [
         /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { children: [
           /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Card, { title: "Account", className: "mb", children: [
@@ -14523,7 +14521,7 @@
                 "Partner ",
                 data.partner.id,
                 " \xB7 ",
-                data.sites.length,
+                data.sites.filter((x) => x.stage !== "closed").length,
                 " sites"
               ] })
             ] }) })
@@ -14593,76 +14591,235 @@
               /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: "Low-bandwidth mode (no thumbnails)" }),
               /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: `sw ${prefs.low ? "on" : ""}`, onClick: () => setPrefs({ ...prefs, low: !prefs.low }), "aria-label": "toggle" })
             ] })
+          ] })
+        ] })
+      ] })
+    ] });
+  }
+
+  // src/pages/Help.tsx
+  var import_react5 = __toESM(require_react(), 1);
+  var import_jsx_runtime11 = __toESM(require_jsx_runtime(), 1);
+  var tickets = [];
+  function Help() {
+    const { data } = useApp();
+    const [tick, setTick] = (0, import_react5.useState)(0);
+    const [form, setForm] = (0, import_react5.useState)({ kind: "", siteId: "", text: "" });
+    const live = data.sites.filter((s) => s.stage !== "closed");
+    const rates = [...new Set(live.map((s) => s.ratePerHour))];
+    const submit = (e) => {
+      e.preventDefault();
+      if (!form.kind || !form.text.trim()) return;
+      tickets.unshift({ id: `RQ-${String(1e3 + tickets.length + 1)}`, kind: form.kind, siteId: form.siteId, text: form.text.trim(), status: "Open" });
+      setForm({ kind: "", siteId: "", text: "" });
+      setTick(tick + 1);
+    };
+    return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(PageH, { title: "Help & SOPs", sub: "Your Humyn team, the rules of the partnership, and how to do the work right." }),
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "help-grid", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Card, { title: "Your Humyn team", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "contact", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "avatar", children: "AK" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "main", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "t", children: "Ashutosh Kashyap" }),
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "s", children: "Your partner lead \xB7 sites, recce, hardware" })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("a", { className: "btn ghost", href: "#", children: "WhatsApp" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "contact", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "avatar", children: "PS" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "main", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "t", children: "Partner Success" }),
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "s", children: "Payments, disputes, anything urgent \xB7 Mon\u2013Sat, 9 am \u2013 7 pm IST" })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("a", { className: "btn ghost", href: "#", children: "WhatsApp" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "contact", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "avatar", children: "HL" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "main", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "t", children: "Humyn Labs office" }),
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "s", children: "2nd Floor, Kaypee Icon, 12th Main Rd, HAL 2nd Stage, Indiranagar, Bengaluru 560008" })
+              ] })
+            ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Card, { title: "Documents and help", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "list", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Row, { title: "Partnership agreement", sub: "Signed", end: "PDF" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Row, { title: "Hardware custody schedule", sub: "Annex A \xB7 signed", end: "PDF" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Row, { title: "How to record a step", sub: "SOP v3 \xB7 English, Hindi, Tamil", end: "PDF" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Row, { title: "Camera and SD card care", sub: "SOP v2 \xB7 English, Hindi, Tamil", end: "PDF" }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Row, { title: "Talk to Partner Success", sub: "Mon\u2013Sat, 9 am \u2013 7 pm IST", end: "WhatsApp" })
-          ] }) })
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Card, { title: "How you get paid", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Rate" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { children: [
+                rates.map((r2) => fmtINR(r2)).join(" / "),
+                " per accepted hour, set per site in your agreement."
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "What counts" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Only hours Humyn accepts after review. Uploading is not accepting." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Review time" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Within two working days of upload. Every rejection carries a reason and a fix." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Invoices" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Raised per site, per week, from accepted hours. You see the arithmetic on each invoice." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Payout" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Scheduled invoices are paid on the next payout date. Bank reference shows on the invoice once paid." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Queries" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Raise one from the invoice; Humyn answers within three working days." })
+            ] })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Card, { title: "Hardware rules \xB7 from Annex A", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Custody" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Passes to you when you confirm receipt on the portal; back to Humyn when they confirm return." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Storage" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "In the lockable room recorded in the recce whenever not in use." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Daily use" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Every issue to and return from an operator is logged in the HumynOperator app the same day." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Loss and damage" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Loss or mishandling is settled at unit value in the next payment cycle. Technical failure is on Humyn." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Reconcile" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Weekly against the asset register; report any gap within 24 hours." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Return" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Within 7 days of a site closing, in the packing provided." })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Card, { title: "SOPs and documents", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "list", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "Site operations SOP", sub: "How a site runs day to day \xB7 v4 \xB7 English, Hindi, Tamil", end: "PDF" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "How to record a step", sub: "Framing, labelling, when to pause \xB7 v3 \xB7 English, Hindi, Tamil", end: "PDF" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "Camera and SD card care", sub: "Charging, mounting, sync, storage \xB7 v2", end: "PDF" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "Partnership agreement", sub: "Signed", end: "PDF" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "Hardware custody schedule", sub: "Annex A \xB7 signed", end: "PDF" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "Packing lists", sub: "One per dispatch, with asset IDs", end: "PDF" })
+          ] }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Card, { title: "Why recordings get rejected", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "faq", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "Camera \u2014 visible, steady, lit" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "The hands and the work piece must stay in frame with enough light to see them. Tighten the head strap, tilt slightly down so the bench top sits mid-frame, and check the first minute on the phone before walking away." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "Task \u2014 right step, right worker" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "The step and worker chosen in the app must match the footage. Pick the step after the worker has started, and reassign the camera in the app when workers swap mid-shift." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "Coverage \u2014 full duration, no gaps" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "Idle time is not validated. Pause when the line stops, resume when work restarts, and keep the power bank cable clipped so the clip does not end early." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "How much is an hour worth to us?" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "Each rejected hour is the site rate you do not receive. The Performance tab shows the reasons costing you the most this week and the workers who need help." })
+            ] })
+          ] }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Card, { title: "Raise a request", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("form", { className: "form", onSubmit: submit, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "f", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("label", { children: "About" }),
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("select", { value: form.kind, onChange: (e) => setForm({ ...form, kind: e.target.value }), required: true, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { value: "", children: "Choose" }),
+                  ["Payment", "Hardware", "A rejected recording", "A site", "Operators or the app", "Something else"].map((k) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { children: k }, k))
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "f", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("label", { children: [
+                  "Site ",
+                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("small", { children: "\xB7 optional" })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("select", { value: form.siteId, onChange: (e) => setForm({ ...form, siteId: e.target.value }), children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { value: "", children: "Not site-specific" }),
+                  live.map((s) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { value: s.id, children: s.name }, s.id))
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "f", style: { gridColumn: "1 / -1" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("label", { children: "What do you need?" }),
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("input", { value: form.text, onChange: (e) => setForm({ ...form, text: e.target.value }), placeholder: "One or two lines is enough", required: true })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { style: { gridColumn: "1 / -1", display: "flex", gap: 10, alignItems: "center" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { className: "btn", type: "submit", disabled: !form.kind || !form.text.trim(), children: "Send to Humyn" }),
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "small muted", children: "Answered within one working day, on WhatsApp and here." })
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "list", style: { borderTop: "1px solid var(--line)" }, children: [
+              tickets.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Empty, { title: "No open requests" }),
+              tickets.map((t) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: `${t.kind}${t.siteId ? ` \xB7 ${data.sites.find((s) => s.id === t.siteId)?.name ?? ""}` : ""}`, sub: `${t.id} \xB7 ${t.text}`, chip: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Chip, { tone: t.status === "Open" ? "amber" : "green", children: t.status }) }, t.id))
+            ] })
+          ] })
         ] })
       ] })
     ] });
   }
 
   // src/App.tsx
-  var import_jsx_runtime11 = __toESM(require_jsx_runtime(), 1);
-  var Ctx2 = (0, import_react5.createContext)({ data: dataset });
-  var useApp = () => (0, import_react5.useContext)(Ctx2);
+  var import_jsx_runtime12 = __toESM(require_jsx_runtime(), 1);
+  var Ctx2 = (0, import_react6.createContext)({ data: dataset });
+  var useApp = () => (0, import_react6.useContext)(Ctx2);
   var TABS = [
     { to: "/sites", label: "Sites" },
-    { to: "/hardware", label: "Hardware" },
-    { to: "/performance", label: "Performance" },
     { to: "/payments", label: "Payments" },
-    { to: "/profile", label: "My Profile" }
+    { to: "/performance", label: "Performance" },
+    { to: "/hardware", label: "Hardware" },
+    { to: "/help", label: "Help & SOPs" }
   ];
   var HOME = "/sites";
-  var activeTab = (path) => path.startsWith("/payments") ? "/payments" : path.startsWith("/performance") ? "/performance" : path.startsWith("/profile") ? "/profile" : path.startsWith("/hardware") ? "/hardware" : "/sites";
+  var activeTab = (path) => path.startsWith("/payments") ? "/payments" : path.startsWith("/performance") ? "/performance" : path.startsWith("/help") ? "/help" : path.startsWith("/hardware") ? "/hardware" : path.startsWith("/profile") ? "" : "/sites";
   var KIND_COLOUR = { ops: "#C43D2F", quality: "#D98E04", hardware: "#383532", payment: "#2F8F5B" };
   var ago = (m) => m < 60 ? `${m} min ago` : m < 1440 ? `${Math.floor(m / 60)} h ago` : `${Math.floor(m / 1440)} d ago`;
   function Shell({ children }) {
     const { data } = useApp();
     const { path } = useRoute();
-    const [open, setOpen] = (0, import_react5.useState)(false);
+    const [open, setOpen] = (0, import_react6.useState)(false);
     const unread = data.notices.filter((n2) => !n2.resolved).length;
-    return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("header", { className: "hdr", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "hdr-in", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Link, { to: HOME, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("img", { src: "/humyn-logo.svg", alt: "Humyn Labs" }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("nav", { className: "tabs", children: TABS.map((t) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Link, { to: t.to, className: `tab ${activeTab(path) === t.to ? "on" : ""}`, children: t.label }, t.to)) }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "hdr-right", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "sample", children: "Sample data" }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "who", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: data.partner.ownerName }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: data.partner.org })
+    return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("header", { className: "hdr", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "hdr-in", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Link, { to: HOME, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("img", { src: "/humyn-logo.svg", alt: "Humyn Labs" }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("nav", { className: "tabs", children: TABS.map((t) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Link, { to: t.to, className: `tab ${activeTab(path) === t.to ? "on" : ""}`, children: t.label }, t.to)) }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "hdr-right", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Link, { to: "/profile", className: `who ${path.startsWith("/profile") ? "on" : ""}`, title: "Your profile", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("b", { children: data.partner.ownerName }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: data.partner.org })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("button", { className: "bell", "aria-label": "Notifications", onClick: () => setOpen((o) => !o), children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M13.7 21a2 2 0 0 1-3.4 0" })
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("button", { className: "bell", "aria-label": "Notifications", onClick: () => setOpen((o) => !o), children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("path", { d: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("path", { d: "M13.7 21a2 2 0 0 1-3.4 0" })
             ] }),
-            unread > 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: unread })
+            unread > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("b", { children: unread })
           ] })
         ] })
       ] }) }),
-      open && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("aside", { className: "drawer", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "card-h", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("h3", { children: "Notifications" }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("a", { onClick: () => setOpen(false), style: { cursor: "pointer" }, children: "Close" })
+      open && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("aside", { className: "drawer", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "card-h", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h3", { children: "Notifications" }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("a", { onClick: () => setOpen(false), style: { cursor: "pointer" }, children: "Close" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "list", children: data.notices.map((n2) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Link, { to: n2.href, className: "row", onClick: () => setOpen(false), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "kind", style: { background: KIND_COLOUR[n2.kind], opacity: n2.resolved ? 0.3 : 1, alignSelf: "flex-start" } }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "main", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: n2.resolved ? "muted" : "t", children: n2.text }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "s", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "list", children: data.notices.map((n2) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Link, { to: n2.href, className: "row", onClick: () => setOpen(false), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "kind", style: { background: KIND_COLOUR[n2.kind], opacity: n2.resolved ? 0.3 : 1, alignSelf: "flex-start" } }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "main", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: n2.resolved ? "muted" : "t", children: n2.text }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "s", children: [
               ago(n2.minutesAgo),
               n2.resolved ? " \xB7 resolved" : ""
             ] })
           ] })
         ] }, n2.id)) })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Crumbs, {}),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("main", { children })
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Crumbs, {}),
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("main", { children })
     ] });
   }
   function Crumbs() {
@@ -14693,48 +14850,50 @@
     } else if (path === "/performance/workers") parts.push({ to: "/performance", label: "Performance" }, { label: "Workers" });
     else if (m = match("/performance/reason/:i", path)) parts.push({ to: "/performance", label: "Performance" }, { label: "Needs work" });
     else if (m = match("/hardware/:id", path)) parts.push({ to: "/hardware", label: "Hardware" }, { label: site(m.id)?.name ?? m.id });
-    if (parts.length < 2) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "crumbs" });
-    return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "crumbs", children: parts.map((p, i) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { style: { display: "contents" }, children: [
-      i > 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "sep", children: "\u203A" }),
-      p.to && i < parts.length - 1 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Link, { to: p.to, children: p.label }) : /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "cur", children: p.label })
+    else if (path === "/profile") parts.push({ to: "/sites", label: data.partner.org }, { label: "Your profile" });
+    if (parts.length < 2) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "crumbs" });
+    return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "crumbs", children: parts.map((p, i) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { style: { display: "contents" }, children: [
+      i > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "sep", children: "\u203A" }),
+      p.to && i < parts.length - 1 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Link, { to: p.to, children: p.label }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "cur", children: p.label })
     ] }, i)) });
   }
   function Routes() {
     const { path, go } = useRoute();
-    (0, import_react5.useEffect)(() => {
+    (0, import_react6.useEffect)(() => {
       if (path === "/") go(HOME, true);
     }, [path, go]);
     let m;
-    if (path === "/payments") return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Payments, {});
-    if (m = match("/payments/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Invoice, { id: m.id });
-    if (path === "/sites") return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Sites, {});
-    if (m = match("/sites/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(SiteDetail, { id: m.id });
-    if (m = match("/sites/:id/people", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(SitePeople, { id: m.id });
-    if (m = match("/sites/:id/hardware", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(SiteHardware, { id: m.id });
-    if (m = match("/sites/:id/today", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(SiteToday, { id: m.id });
-    if (m = match("/sites/:id/step/:step", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(StepDetail, { id: m.id, step: m.step });
-    if (m = match("/sites/:id/operator/:op", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(OperatorPage, { siteId: m.id, id: m.op });
-    if (m = match("/sites/:id/operator/:op/worker/:w", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(WorkerPage, { siteId: m.id, opId: m.op, id: m.w });
-    if (m = match("/recording/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(RecordingPage, { id: m.id });
-    if (path === "/hardware") return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Hardware, {});
-    if (m = match("/hardware/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(SiteHardware, { id: m.id });
-    if (path === "/performance") return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Performance, {});
-    if (path === "/performance/workers") return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Workers, {});
-    if (m = match("/performance/reason/:i", path)) return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(ReasonList, { index: Number(m.i) });
-    if (path === "/profile") return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Profile, {});
-    return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "empty", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Page not found" }),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Link, { to: HOME, children: "Go to Sites" })
+    if (path === "/payments") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Payments, {});
+    if (m = match("/payments/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Invoice, { id: m.id });
+    if (path === "/sites") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Sites, {});
+    if (m = match("/sites/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SiteDetail, { id: m.id });
+    if (m = match("/sites/:id/people", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SitePeople, { id: m.id });
+    if (m = match("/sites/:id/hardware", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SiteHardware, { id: m.id });
+    if (m = match("/sites/:id/today", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SiteToday, { id: m.id });
+    if (m = match("/sites/:id/step/:step", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(StepDetail, { id: m.id, step: m.step });
+    if (m = match("/sites/:id/operator/:op", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(OperatorPage, { siteId: m.id, id: m.op });
+    if (m = match("/sites/:id/operator/:op/worker/:w", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(WorkerPage, { siteId: m.id, opId: m.op, id: m.w });
+    if (m = match("/recording/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(RecordingPage, { id: m.id });
+    if (path === "/hardware") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Hardware, {});
+    if (m = match("/hardware/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SiteHardware, { id: m.id });
+    if (path === "/performance") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Performance, {});
+    if (path === "/performance/workers") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Workers, {});
+    if (m = match("/performance/reason/:i", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(ReasonList, { index: Number(m.i) });
+    if (path === "/profile") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Profile, {});
+    if (path === "/help") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Help, {});
+    return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "empty", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("b", { children: "Page not found" }),
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Link, { to: HOME, children: "Go to Sites" })
     ] });
   }
   function App() {
-    return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Router, { children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Ctx2.Provider, { value: { data: dataset }, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Shell, { children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Routes, {}) }) }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Router, { children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Ctx2.Provider, { value: { data: dataset }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Shell, { children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Routes, {}) }) }) });
   }
 
   // src/main.tsx
-  var import_jsx_runtime12 = __toESM(require_jsx_runtime(), 1);
+  var import_jsx_runtime13 = __toESM(require_jsx_runtime(), 1);
   (0, import_client.createRoot)(document.getElementById("root")).render(
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_react6.StrictMode, { children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(App, {}) })
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(import_react7.StrictMode, { children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(App, {}) })
   );
 })();
 /*! Bundled license information:

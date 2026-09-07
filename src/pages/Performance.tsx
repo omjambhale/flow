@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useApp } from '../App'
 import { Link } from '../router'
 import { Card, Empty, Kpi, PageH, Ring, ScoreBars, scoreTone, type Tone } from '../components/ui'
-import { Bars, HBars, Heat } from '../components/charts'
+import { HBars, Heat } from '../components/charts'
 import {
-  avgScores, byReason, fmtHours, fmtINR, isGood, shortName, summarise, thisWeek, weekAgo, weekLabels, weeklyFunnel, workerStats,
+  avgScores, byReason, fmtHours, fmtINR, isGood, shortName, summarise, thisWeek, weekAgo, workerStats,
 } from '../derive'
 import { RecRow } from './Sites'
 
@@ -21,7 +21,6 @@ export function Performance() {
   const delta = s.acceptance - last.acceptance
   const lost = recs.filter(r => r.status === 'rejected').reduce((sum, r) => sum + r.minutes / 60 * (data.sites.find(x => x.id === r.siteId)?.ratePerHour ?? 0), 0)
   const reasons = byReason(recs)
-  const funnel = weeklyFunnel(data.recordings, 5)
   const live = data.sites.filter(x => x.stage === 'live')
   const bySite = live.map(site => { const ss = summarise(recs.filter(r => r.siteId === site.id)); return { label: site.name, value: ss.acceptance, to: `/sites/${site.id}`, tone: ss.acceptance < 80 ? '#C43D2F' : ss.acceptance < 92 ? '#D98E04' : '#2F8F5B', hint: `${ss.bad} of ${ss.good + ss.bad} rejected` } })
   const byStep = live.flatMap(site => site.process.steps.map(st => {
@@ -44,22 +43,22 @@ export function Performance() {
       </div>
 
       <div className="cgrid mb">
-        <Card title="Accepted vs rejected hours · 5 weeks">
-          <div className="cpad"><Bars data={funnel.map((f, i) => ({ label: weekLabels(5)[i], value: f.accepted, sub: f.rejected }))} format={v => fmtHours(v)} valueLabel="accepted" subLabel="rejected" /></div>
-        </Card>
         <Card title="Why hours were rejected" action={reasons.length ? { to: '/performance/reason/0', label: 'See recordings' } : undefined}>
           <div className="cpad">{reasons.length ? <HBars data={reasons.map((r, i) => ({ label: r.reason, value: r.hours, to: `/performance/reason/${i}`, hint: `${r.count} recordings` }))} format={v => fmtHours(v)} /> : <Empty title="Nothing rejected" />}</div>
+        </Card>
+        <Card title="The three scores">
+          <div className="ring-wrap" style={{ padding: '18px' }}><Ring value={s.acceptance} size={150} /><ScoreBars {...scores} /></div>
         </Card>
       </div>
 
       <div className="cgrid mb">
-        <Card title="The three scores">
-          <div className="ring-wrap" style={{ padding: '18px' }}><Ring value={s.acceptance} size={150} /><ScoreBars {...scores} /></div>
-        </Card>
         <Card title="Acceptance by site">
           <div className="cpad"><HBars data={bySite} format={v => `${v}%`} max={100} /></div>
           <div className="card-h" style={{ borderTop: '1px solid var(--line)', borderBottom: 0 }}><h3 style={{ fontSize: 14 }}>Weakest steps</h3></div>
           <div className="cpad">{byStep.length ? <HBars data={byStep} format={v => `${v}%`} max={100} /> : <Empty title="Not enough recordings yet" />}</div>
+        </Card>
+        <Card title="Rejected hours by operator · 30 days">
+          <div className="cpad"><HBars data={data.people.filter(p => p.role === 'operator' && p.active).map(p => { const rr = data.recordings.filter(r => r.operatorId === p.id && r.date > monthStart && r.status === 'rejected'); return { label: `${p.name} · ${shortName(data.sites.find(x => x.id === p.siteId)?.name ?? '')}`, value: Math.round(rr.reduce((t, r) => t + r.minutes, 0) / 6) / 10, to: `/sites/${p.siteId}/operator/${p.id}`, hint: `${rr.length} recordings` } }).sort((a, b) => b.value - a.value)} format={v => fmtHours(v)} /></div>
         </Card>
       </div>
 

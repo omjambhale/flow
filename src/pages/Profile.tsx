@@ -22,12 +22,12 @@ export function Profile() {
   }
   return (
     <>
-      <PageH title="My Profile" sub={`${data.partner.ownerName} · ${data.partner.org} · partner since ${fmtDate(data.partner.since)}`} />
+      <PageH title="Your profile" sub={`${data.partner.ownerName} · ${data.partner.org} · partner since ${fmtDate(data.partner.since)}`} />
       <div className="grid2">
         <div>
           <Card title="Account" className="mb">
             <div className="row"><div className="main"><div className="t">{data.partner.ownerName}</div><div className="s">{data.partner.email} · {data.partner.phone}</div></div></div>
-            <div className="row"><div className="main"><div className="t">{data.partner.org}</div><div className="s">Partner {data.partner.id} · {data.sites.length} sites</div></div></div>
+            <div className="row"><div className="main"><div className="t">{data.partner.org}</div><div className="s">Partner {data.partner.id} · {data.sites.filter(x => x.stage !== 'closed').length} sites</div></div></div>
           </Card>
           <Card title="Add a supervisor or operator" className="mb">
             <form className="form" onSubmit={submit}>
@@ -76,15 +76,6 @@ export function Profile() {
               <div className="seg">{[['en', 'English'], ['hi', 'हिन्दी'], ['ta', 'தமிழ்']].map(([k, l]) => <button key={k} className={prefs.lang === k ? 'on' : ''} onClick={() => setPrefs({ ...prefs, lang: k })}>{l}</button>)}</div>
             </div>
             <div className="toggle"><span>Low-bandwidth mode (no thumbnails)</span><button className={`sw ${prefs.low ? 'on' : ''}`} onClick={() => setPrefs({ ...prefs, low: !prefs.low })} aria-label="toggle" /></div>
-          </Card>
-          <Card title="Documents and help">
-            <div className="list">
-              <Row title="Partnership agreement" sub="Signed" end="PDF" />
-              <Row title="Hardware custody schedule" sub="Annex A · signed" end="PDF" />
-              <Row title="How to record a step" sub="SOP v3 · English, Hindi, Tamil" end="PDF" />
-              <Row title="Camera and SD card care" sub="SOP v2 · English, Hindi, Tamil" end="PDF" />
-              <Row title="Talk to Partner Success" sub="Mon–Sat, 9 am – 7 pm IST" end="WhatsApp" />
-            </div>
           </Card>
         </div>
       </div>

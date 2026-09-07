@@ -88,6 +88,16 @@ const sites: Site[] = [
     type: 'Foundry and machining', stage: 'recce', ratePerHour: 418, process: foundry,
     uploadLagMin: 0, scheduledToday: 0, presentToday: 0, startedOn: '',
   },
+  {
+    id: 'HL006', name: 'Vijaya Auto Pressings', city: 'Peenya', state: 'Karnataka',
+    type: 'Sheet-metal stamping', stage: 'closed', ratePerHour: 400, process: stamping,
+    uploadLagMin: 0, scheduledToday: 0, presentToday: 0, startedOn: '2026-04-06', closedOn: '2026-06-28', finalHours: 812, paidTotal: 324800,
+  },
+  {
+    id: 'HL009', name: 'Meenakshi Textiles', city: 'Tiruppur', state: 'Tamil Nadu',
+    type: 'Textile and garments', stage: 'closed', ratePerHour: 390, process: textile,
+    uploadLagMin: 0, scheduledToday: 0, presentToday: 0, startedOn: '2026-05-11', closedOn: '2026-07-19', finalHours: 640, paidTotal: 249600,
+  },
 ]
 
 /* ---------- people ---------- */

@@ -5,7 +5,7 @@ import { HBars } from '../components/charts'
 import type { Site, Step } from '../types'
 import {
   assetValue, assetsAtRisk, byReason, cameraOutput, fmtDate, fmtHours, fmtINR, healthLabel, hrs, isGood, pct, siteHealth, siteRecordings,
-  siteTarget, stageLabel, statusLabel, stepExpected, summarise, thisWeek, titleOf, weeklyAccepted, workerStats,
+  siteTarget, stageLabel, statusLabel, stepExpected, summarise, thisWeek, titleOf, workerStats,
 } from '../derive'
 
 const stepDone = (recs: ReturnType<typeof siteRecordings>, step: Step) => hrs(recs.filter(r => r.stepId === step.id && isGood(r)).reduce((s, r) => s + r.minutes, 0))
@@ -20,26 +20,25 @@ export function Sites() {
   const { data } = useApp()
   const order = { attention: 0, collecting: 1, paused: 2, 'setting-up': 3 }
   const live = data.sites.filter(s => s.stage === 'live').sort((a, b) => order[siteHealth(data, a)] - order[siteHealth(data, b)])
-  const onboarding = data.sites.filter(s => s.stage !== 'live')
+  const onboarding = data.sites.filter(s => s.stage !== 'live' && s.stage !== 'closed')
+  const past = data.sites.filter(s => s.stage === 'closed')
   const week = summarise(thisWeek(data.recordings))
   const cams = data.assets.filter(a => a.type === 'camera' && a.status !== 'transit')
   const camsOn = cams.filter(a => a.status === 'in-use').length
   const risk = assetsAtRisk(data)
   const lagSites = live.filter(s => s.uploadLagMin > 1440).length
   const present = live.reduce((s, x) => s + x.presentToday, 0), sched = live.reduce((s, x) => s + x.scheduledToday, 0)
-  const problems = live.filter(s => siteHealth(data, s) === 'attention').length
   return (
     <>
-      <PageH title="Sites" sub={`${live.length} live · ${onboarding.length} setting up`} right={<Link to="/" className="btn ghost">+ Add a site</Link>} />
+      <PageH title="Sites" sub={`${live.length} live · ${onboarding.length} setting up`} right={<a href="/" className="btn ghost">+ Add a site</a>} />
       <div className="kpis">
-        <Kpi label="Accepted this week" value={fmtHours(week.acceptedHours)} spark={weeklyAccepted(data.recordings)} to="/performance" />
+        <Kpi label="Accepted this week" value={fmtHours(week.acceptedHours)} sub={`${fmtHours(summarise(data.recordings).acceptedHours)} all time`} to="/performance" />
         <Kpi label="Acceptance" value={`${week.acceptance}%`} tone={accTone(week.acceptance)} sub={`${week.bad} need work`} to="/performance" />
         <Kpi label="Present today" value={present} sub={`of ${sched}`} tone={presTone(present, sched)} />
         <Kpi label="Cameras recording" value={`${camsOn}/${cams.length}`} tone={camsOn < cams.length ? 'amber' : undefined} to="/hardware" />
         <Kpi label="Upload behind" value={lagSites} sub={lagSites ? 'sites > 1 day' : 'all synced'} tone={lagSites ? 'red' : undefined} />
         <Kpi label="Hardware at risk" value={fmtINR(assetValue(risk))} sub={`${risk.length} items`} tone={risk.length ? 'red' : undefined} to="/hardware" />
       </div>
-      {problems > 0 && <div className="eyebrow" style={{ marginBottom: 8, color: 'var(--red)' }}>● {problems} site{problems > 1 ? 's need' : ' needs'} attention</div>}
       <div className="sites">
         {live.length === 0 && <Card><Empty title="No live sites yet" /></Card>}
         {live.map(s => <SiteCard key={s.id} site={s} />)}
@@ -49,6 +48,21 @@ export function Sites() {
           <summary>Setting up · {onboarding.length}</summary>
           <div className="onb">
             {onboarding.map(s => <OnboardingRow key={s.id} site={s} />)}
+          </div>
+        </details>
+      )}
+      {past.length > 0 && (
+        <details className="card fold mt past">
+          <summary>Past sites · {past.length}</summary>
+          <div className="list">
+            {past.map(s => (
+              <Link key={s.id} to={`/sites/${s.id}`} className="row">
+                <span className="dot grey" />
+                <div className="main"><div className="t">{s.name}</div><div className="s">{s.city} · {s.type} · {fmtDate(s.startedOn)} – {fmtDate(s.closedOn)}</div></div>
+                <div className="end"><b>{fmtHours(s.finalHours ?? 0)} accepted</b>{fmtINR(s.paidTotal ?? 0)} paid · {s.id}</div>
+                <span className="arrow">›</span>
+              </Link>
+            ))}
           </div>
         </details>
       )}
@@ -117,10 +131,25 @@ export function SiteDetail({ id }: { id: string }) {
   const camsOn = site.stage === 'live' ? cams.filter(a => a.status === 'in-use').length : 0
   const steps = site.process.steps
   const cur = steps.find(st => stepDone(recs, st) < stepExpected(st))
+  const behind = [...steps].sort((a, b) => (stepDone(recs, a) / stepExpected(a)) - (stepDone(recs, b) / stepExpected(b)))[0]
   const workers = workerStats(data, recs).sort((a, b) => b.acceptedHours - a.acceptedHours)
   const ops = data.people.filter(p => p.siteId === site.id && p.role === 'operator' && p.active)
   const bad = recs.filter(r => r.status === 'rejected').sort((a, b) => b.date.localeCompare(a.date))
   const reasons = byReason(thisWeek(recs))
+  if (site.stage === 'closed') {
+    return (
+      <>
+        <PageH title={site.name} sub={`${site.id} · ${site.city}, ${site.state} · ${site.type} · ${fmtDate(site.startedOn)} – ${fmtDate(site.closedOn)}`} right={<Chip tone="grey">Completed</Chip>} />
+        <div className="kpis k4">
+          <Kpi label="Accepted" value={fmtHours(site.finalHours ?? 0)} sub="all time" />
+          <Kpi label="Paid" value={fmtINR(site.paidTotal ?? 0)} sub={`${fmtINR(site.ratePerHour)} per hour`} />
+          <Kpi label="Process" value={site.process.name} sub={`${steps.length} steps`} />
+          <Kpi label="Hardware" value="Returned" sub="custody closed" />
+        </div>
+        <Card title="Steps in this process"><div className="cpad"><HBars data={steps.map(st => ({ label: `${st.order}. ${st.name}`, value: stepExpected(st) }))} format={v => `${v}h`} /></div></Card>
+      </>
+    )
+  }
   if (site.stage !== 'live') {
     return (
       <>
@@ -148,7 +177,7 @@ export function SiteDetail({ id }: { id: string }) {
         <Kpi label="Hardware" value={fmtINR(assetValue(hw))} sub={risk.length ? `${fmtINR(assetValue(risk))} at risk` : `${hw.length} items`} subTone={risk.length ? 'red' : undefined} to={`/sites/${site.id}/hardware`} />
       </div>
 
-      <Card title={<>Process map <span className="muted small">· {site.process.name} · click a step for its tasks</span></>} className="mb">
+      <Card title={<>Process map <span className="muted small">· {site.process.name}</span></>} action={behind ? { to: `/sites/${site.id}/step/${behind.id}`, label: `Furthest behind: ${behind.name} · ${Math.round(stepDone(recs, behind))}h of ${stepExpected(behind)}h` } : undefined} className="mb">
         <div className="chain" style={{ padding: '14px 18px 16px' }}>
           {steps.map(st => {
             const exp = stepExpected(st), d = stepDone(recs, st)
