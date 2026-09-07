@@ -38,7 +38,7 @@ export function Hardware() {
         right={<div className="filters">
           <label><span>Site</span><select className="sel" value={siteId} onChange={e => { setSiteId(e.target.value); setOpId('all') }}><option value="all">All sites</option>{data.sites.filter(x => data.assets.some(a => a.siteId === x.id)).map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
           <label><span>Operator</span><select className="sel" value={opId} onChange={e => setOpId(e.target.value)}><option value="all">All operators</option>{opsAll.map(p => <option key={p.id} value={p.id}>{p.name}{siteId === 'all' ? ` · ${shortName(data.sites.find(x => x.id === p.siteId)?.name ?? '')}` : ''}</option>)}</select></label>
-          <a className="btn ghost" href={hardwareCsv({ ...data, assets: all })} download="humyn-hardware-list.csv">{all.length === data.assets.length ? 'Export full hardware list' : `Export ${all.length} items`}</a>
+          <a className="btn ghost" href={hardwareCsv({ ...data, assets: all })} download="humyn-hardware-list.csv">{all.length === data.assets.length ? 'Export full hardware list' : `Export ${all.length} pieces`}</a>
         </div>} />
       <div className="kpis">
         <Kpi label="In custody" value={custody.length} sub={opId !== 'all' ? 'with this operator' : `${sites.filter(s => s.stage === 'live').length} site${sites.filter(s => s.stage === 'live').length === 1 ? '' : 's'}`} />

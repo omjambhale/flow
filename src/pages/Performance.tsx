@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useApp } from '../App'
 import { Link } from '../router'
-import { Card, Empty, Kpi, PageH, Ring, ScoreBars, scoreTone, type Tone } from '../components/ui'
+import { Card, Empty, Kpi, PageH, QualityScore, scoreTone, type Tone } from '../components/ui'
 import { HBars } from '../components/charts'
 import {
-  avgScores, byReason, fmtHours, fmtINR, shortName, summarise, thisWeek, weekAgo, workerStats,
+  byReason, fmtHours, fmtINR, qualityScore, shortName, summarise, weekAgo, workerStats,
 } from '../derive'
 import { RecRow } from './Sites'
 
@@ -37,8 +37,8 @@ export function Performance() {
   })).filter(x => x.count >= 3).sort((a, b) => a.value - b.value).slice(0, 8)
   const byOperator = operators.map(p => { const rr = recs.filter(r => r.operatorId === p.id); const ss = summarise(rr); return { label: `${p.name} · ${shortName(data.sites.find(x => x.id === p.siteId)?.name ?? '')}`, value: ss.rejectedHours, to: `/sites/${p.siteId}/operator/${p.id}`, tone: ss.acceptance < 80 ? '#C43D2F' : ss.acceptance < 92 ? '#D98E04' : undefined, hint: `${ss.bad} recordings · ${ss.acceptance}% accepted` } }).sort((a, b) => b.value - a.value)
   const workers = workerStats(data, recs)
-  const scores = avgScores(recs)
-  const weakest = (['camera', 'task', 'coverage'] as const).sort((a, b) => scores[a] - scores[b])[0]
+  const quality = qualityScore(recs)
+  const prevQuality = qualityScore(data.recordings.filter(r => r.date > lastWeekStart && r.date <= weekAgo && (siteId === 'all' || r.siteId === siteId) && (opId === 'all' || r.operatorId === opId)))
   const periodLabel = PERIODS.find(x => x[0] === period)![1].toLowerCase()
   return (
     <>
@@ -52,15 +52,15 @@ export function Performance() {
         <Kpi label="Acceptance" value={`${s.acceptance}%`} tone={accTone(s.acceptance)} sub={period === 'week' ? `${delta >= 0 ? '+' : ''}${delta} pts vs last week` : `${s.good + s.bad} reviewed · ${periodLabel}`} subTone={delta < 0 && period === 'week' ? 'red' : undefined} />
         <Kpi label="Hours rejected" value={fmtHours(s.rejectedHours)} sub={`${s.bad} recordings`} tone={s.rejectedHours > 8 ? 'amber' : undefined} />
         <Kpi label="Amount rejected" value={fmtINR(rejectedAmt)} sub="rejected hours × rate" tone={rejectedAmt > 0 ? 'red' : undefined} />
-        <Kpi label="Weakest of the 3 scores" value={weakest[0].toUpperCase() + weakest.slice(1)} sub={`${scores[weakest]} / 100 · ${{ camera: 'is the work visible, steady, lit', task: 'right step, right worker', coverage: 'full duration, no idle gaps' }[weakest]}`} tone={scoreTone(scores[weakest]) === 'green' ? undefined : scoreTone(scores[weakest])} />
+        <Kpi label="Quality score" value={`${quality}`} sub={quality ? `out of 100 · ${quality >= 85 ? 'good' : quality >= 70 ? 'needs work' : 'poor'}` : 'nothing reviewed yet'} tone={!quality || scoreTone(quality) === 'green' ? undefined : scoreTone(quality)} />
       </div>
 
       <div className="cgrid mb">
         <Card title="Why hours were rejected" action={reasons.length ? { to: '/performance/reason/0', label: 'See recordings' } : undefined}>
           <div className="cpad">{reasons.length ? <HBars data={reasons.map((r, i) => ({ label: r.reason, value: r.hours, to: `/performance/reason/${i}`, hint: `${r.count} recordings` }))} format={v => fmtHours(v)} /> : <Empty title="Nothing rejected" />}</div>
         </Card>
-        <Card title="The three scores">
-          <div className="ring-wrap" style={{ padding: '18px' }}><Ring value={s.acceptance} size={150} /><ScoreBars {...scores} /></div>
+        <Card title="Quality score">
+          <QualityScore value={quality} prev={period === 'week' ? prevQuality : undefined} />
         </Card>
       </div>
 

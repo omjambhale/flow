@@ -13185,11 +13185,11 @@
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("circle", { cx: w, cy: h - data[data.length - 1] / max * (h - 4) - 2, r: "3", fill: "#FF6E42" })
     ] });
   }
-  function Ring({ value, size = 180 }) {
+  function Ring({ value, size = 180, label = "accepted", good = 92, ok = 80, unit = "%" }) {
     const r2 = size / 2 - 12;
     const c = 2 * Math.PI * r2;
-    const tone = value >= 92 ? "#2F8F5B" : value >= 80 ? "#D98E04" : "#C43D2F";
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: size, height: size, viewBox: `0 0 ${size} ${size}`, role: "img", "aria-label": `${value}% accepted`, children: [
+    const tone = value >= good ? "#2F8F5B" : value >= ok ? "#D98E04" : "#C43D2F";
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: size, height: size, viewBox: `0 0 ${size} ${size}`, role: "img", "aria-label": `${value}% ${label}`, children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("circle", { cx: size / 2, cy: size / 2, r: r2, fill: "none", stroke: "#EFECE8", strokeWidth: "14" }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
         "circle",
@@ -13207,12 +13207,27 @@
       ),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("text", { x: "50%", y: "50%", textAnchor: "middle", dominantBaseline: "central", fontFamily: "Rethink Sans, sans-serif", fontWeight: "700", fontSize: size / 5, fill: "#161516", children: [
         value,
-        "%"
+        unit
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("text", { x: "50%", y: size / 2 + size / 7, textAnchor: "middle", fontSize: "12", fill: "#7A7672", children: "accepted" })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("text", { x: "50%", y: size / 2 + size / 7, textAnchor: "middle", fontSize: "12", fill: "#7A7672", children: label })
     ] });
   }
   var scoreTone = (v) => v >= 85 ? "green" : v >= 70 ? "amber" : "red";
+  function QualityScore({ value, prev }) {
+    const d = prev === void 0 ? void 0 : value - prev;
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "ring-wrap", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Ring, { value, size: 150, label: "out of 100", good: 85, ok: 70, unit: "" }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "t", style: { fontWeight: 700, fontSize: 16 }, children: value >= 85 ? "Good" : value >= 70 ? "Needs work" : "Poor" }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "small muted", style: { marginTop: 6, lineHeight: 1.5 }, children: "Humyn scores every reviewed recording out of 100 on how well the work was captured. 85 and above is good; below 70 hours start getting rejected." }),
+        d !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: `small ${d < 0 ? "red" : "muted"}`, style: { marginTop: 8 }, children: [
+          d >= 0 ? "+" : "",
+          d,
+          " pts vs last week"
+        ] })
+      ] })
+    ] });
+  }
   function ScoreBars({ camera, task, coverage }) {
     const rows = [
       ["Camera", "visible, steady, lit", camera],
@@ -13363,6 +13378,11 @@
     if (!scored.length) return { camera: 0, task: 0, coverage: 0 };
     const s = scored.reduce((acc, r2) => ({ camera: acc.camera + r2.scores.camera, task: acc.task + r2.scores.task, coverage: acc.coverage + r2.scores.coverage }), { camera: 0, task: 0, coverage: 0 });
     return { camera: Math.round(s.camera / scored.length), task: Math.round(s.task / scored.length), coverage: Math.round(s.coverage / scored.length) };
+  };
+  var qualityScore = (recs) => {
+    const a2 = avgScores(recs);
+    const scored = recs.filter((r2) => r2.scores).length;
+    return scored ? Math.round((a2.camera + a2.task + a2.coverage) / 3) : 0;
   };
   var thisWeek = (recs) => recs.filter((r2) => r2.date > weekAgo);
   var stepExpected = (s) => s.tasks.reduce((sum, t) => sum + t.workers * t.hoursPerWorker, 0);
@@ -13803,8 +13823,8 @@
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "dg", style: { marginTop: 12 }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(D, { e: "Acceptance", v: `${week.acceptance}%`, tone: accTone(week.acceptance) }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(D, { e: "Workers", v: siteWorkersWeek, small: `/ ${siteWorkers}`, tone: siteWorkersWeek < siteWorkers * 0.7 ? "amber" : void 0 }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(D, { e: "Equipment", v: camsOn, small: `/ ${cams.length} cameras`, tone: camsOn < cams.length ? "amber" : void 0 }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(D, { e: "Missing", v: risk.length || "\u2014", small: risk.length ? `item${risk.length > 1 ? "s" : ""} \xB7 ${fmtINR(assetValue(risk))}` : void 0, tone: risk.length ? "red" : void 0 })
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(D, { e: "Hardware", v: camsOn, small: `/ ${cams.length} cameras`, tone: camsOn < cams.length ? "amber" : void 0 }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(D, { e: "Missing", v: risk.length || "\u2014", small: risk.length ? `hardware \xB7 ${fmtINR(assetValue(risk))}` : void 0, tone: risk.length ? "red" : void 0 })
       ] })
     ] });
   }
@@ -13896,9 +13916,9 @@
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Progress", value: `${pct(all.acceptedHours, target)}%`, sub: `${fmtHours(all.acceptedHours)} of ${fmtHours(target)}` }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Acceptance", value: `${week.acceptance}%`, tone: accTone(week.acceptance), sub: "this week" }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Workers", value: `${site.presentToday}/${site.scheduledToday}`, sub: "on the floor today", tone: presTone(site.presentToday, site.scheduledToday), to: `/sites/${site.id}/today` }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Items", value: hw.length, sub: `${camsOn}/${cams.length} cameras recording`, subTone: camsOn < cams.length ? "amber" : void 0, to: `/sites/${site.id}/hardware` }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Hardware", value: hw.length, sub: `${camsOn}/${cams.length} cameras recording`, subTone: camsOn < cams.length ? "amber" : void 0, to: `/sites/${site.id}/hardware` }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Upload", value: lagText(site.uploadLagMin), tone: lagTone(site.uploadLagMin), to: `/sites/${site.id}/today` }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Hardware", value: fmtINR(assetValue(hw)), sub: risk.length ? `${fmtINR(assetValue(risk))} at risk` : `${hw.length} items`, subTone: risk.length ? "red" : void 0, to: `/sites/${site.id}/hardware` })
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Hardware value", value: fmtINR(assetValue(hw)), sub: risk.length ? `${fmtINR(assetValue(risk))} at risk` : `${hw.length} pieces`, subTone: risk.length ? "red" : void 0, to: `/sites/${site.id}/hardware` })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Card, { title: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
         "Process map ",
@@ -13937,7 +13957,6 @@
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { className: "num", children: "Share" }),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { className: "num", children: "Workers" }),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { className: "num", children: "Over cap" }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", { className: "num", children: "Room left" }),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("th", {})
         ] }) }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("tbody", { children: coverage.map((c) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("tr", { className: "click", onClick: () => go(`/sites/${site.id}/step/${c.step.id}`), children: [
@@ -13961,7 +13980,6 @@
             ] })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { className: `num ${c.overCap ? "red" : ""}`, children: c.overCap ? `${c.overCap} \xB7 ${fmtHours(c.overHours)} not counted` : "\u2014" }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { className: "num", children: c.room ? fmtHours(c.room) : "\u2014" }),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("td", { className: "arrow", children: "\u203A" })
         ] }, c.task.id)) })
       ] }) }) }),
@@ -14222,7 +14240,7 @@
     return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(PageH, { title: "Hardware", sub: `${site.name} \xB7 Humyn's equipment in your custody` }),
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "kpis k4", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Items", value: hw.length, sub: hw[0]?.status === "transit" ? "in transit" : "in custody" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Hardware", value: hw.length, sub: hw[0]?.status === "transit" ? "in transit" : "in custody" }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Value", value: fmtINR(assetValue(hw)), sub: "you are liable for this" }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "At risk", value: risk.length ? fmtINR(assetValue(risk)) : "\u20B90", sub: `${risk.length} missing or damaged`, tone: risk.length ? "red" : void 0 }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Idle cameras", value: idle.length, sub: "no output this week", tone: idle.length ? "amber" : void 0 })
@@ -14305,10 +14323,7 @@
         /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Kpi, { label: "Needs work this week", value: String(week.bad), sub: `${fmtHours(week.rejectedHours)} not paid`, to: "/performance" }),
         /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Kpi, { label: "All time", value: fmtHours(all.acceptedHours), sub: `${all.acceptance}% accepted` })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Card, { className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ring-wrap", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Ring, { value: all.acceptance, size: 160 }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ScoreBars, { ...avgScores(recs) })
-      ] }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Card, { className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(QualityScore, { value: qualityScore(recs) }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Card, { title: `Workers \xB7 ${workers2.length}`, className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "list", children: [
         workers2.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Empty, { title: "No workers assigned" }),
         workers2.map((w) => {
@@ -14360,10 +14375,7 @@
         /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Kpi, { label: "Team", value: `${ops.filter((o) => o.active).length} operators`, sub: `${workers2} workers` }),
         /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Kpi, { label: "All time", value: fmtHours(all.acceptedHours), sub: `${all.acceptance}% accepted` })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Card, { className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ring-wrap", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Ring, { value: all.acceptance, size: 160 }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ScoreBars, { ...avgScores(recs) })
-      ] }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Card, { className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(QualityScore, { value: qualityScore(recs) }) }),
       /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Card, { title: `Operators under ${p.name.split(" ")[0]} \xB7 ${ops.length}`, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "list", children: ops.map((o) => {
         const s = summarise(thisWeek(recs.filter((r2) => r2.operatorId === o.id)));
         const cams = data.assets.filter((a2) => a2.holderId === o.id && a2.type === "camera");
@@ -14486,8 +14498,8 @@
       return { label: `${p.name} \xB7 ${shortName(data.sites.find((x) => x.id === p.siteId)?.name ?? "")}`, value: ss.rejectedHours, to: `/sites/${p.siteId}/operator/${p.id}`, tone: ss.acceptance < 80 ? "#C43D2F" : ss.acceptance < 92 ? "#D98E04" : void 0, hint: `${ss.bad} recordings \xB7 ${ss.acceptance}% accepted` };
     }).sort((a2, b) => b.value - a2.value);
     const workers2 = workerStats(data, recs);
-    const scores = avgScores(recs);
-    const weakest = ["camera", "task", "coverage"].sort((a2, b) => scores[a2] - scores[b])[0];
+    const quality = qualityScore(recs);
+    const prevQuality = qualityScore(data.recordings.filter((r2) => r2.date > lastWeekStart && r2.date <= weekAgo && (siteId === "all" || r2.siteId === siteId) && (opId === "all" || r2.operatorId === opId)));
     const periodLabel = PERIODS.find((x) => x[0] === period)[1].toLowerCase();
     return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
@@ -14527,14 +14539,11 @@
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Kpi, { label: "Acceptance", value: `${s.acceptance}%`, tone: accTone2(s.acceptance), sub: period === "week" ? `${delta >= 0 ? "+" : ""}${delta} pts vs last week` : `${s.good + s.bad} reviewed \xB7 ${periodLabel}`, subTone: delta < 0 && period === "week" ? "red" : void 0 }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Kpi, { label: "Hours rejected", value: fmtHours(s.rejectedHours), sub: `${s.bad} recordings`, tone: s.rejectedHours > 8 ? "amber" : void 0 }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Kpi, { label: "Amount rejected", value: fmtINR(rejectedAmt), sub: "rejected hours \xD7 rate", tone: rejectedAmt > 0 ? "red" : void 0 }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Kpi, { label: "Weakest of the 3 scores", value: weakest[0].toUpperCase() + weakest.slice(1), sub: `${scores[weakest]} / 100 \xB7 ${{ camera: "is the work visible, steady, lit", task: "right step, right worker", coverage: "full duration, no idle gaps" }[weakest]}`, tone: scoreTone(scores[weakest]) === "green" ? void 0 : scoreTone(scores[weakest]) })
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Kpi, { label: "Quality score", value: `${quality}`, sub: quality ? `out of 100 \xB7 ${quality >= 85 ? "good" : quality >= 70 ? "needs work" : "poor"}` : "nothing reviewed yet", tone: !quality || scoreTone(quality) === "green" ? void 0 : scoreTone(quality) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "cgrid mb", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "Why hours were rejected", action: reasons2.length ? { to: "/performance/reason/0", label: "See recordings" } : void 0, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: reasons2.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: reasons2.map((r2, i) => ({ label: r2.reason, value: r2.hours, to: `/performance/reason/${i}`, hint: `${r2.count} recordings` })), format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "Nothing rejected" }) }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "The three scores", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ring-wrap", style: { padding: "18px" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Ring, { value: s.acceptance, size: 150 }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ScoreBars, { ...scores })
-        ] }) })
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "Quality score", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(QualityScore, { value: quality, prev: period === "week" ? prevQuality : void 0 }) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "cgrid mb", children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: opId === "all" ? "Rejected hours by operator" : `Rejected hours by worker \xB7 ${operators2.find((p) => p.id === opId)?.name ?? ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: opId === "all" ? byOperator.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: byOperator, format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "No operators in this view" }) : workers2.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: [...workers2].sort((a2, b) => b.rejectedHours - a2.rejectedHours).map((w) => ({ label: w.name, value: w.rejectedHours, to: `/sites/${w.siteId}/operator/${w.operatorId}/worker/${w.id}`, tone: w.acceptance < 80 ? "#C43D2F" : w.acceptance < 92 ? "#D98E04" : void 0, hint: `${w.acceptance}% accepted \xB7 ${w.mainIssue ?? ""}` })), format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "No recordings in this view" }) }) }),
@@ -14622,7 +14631,7 @@
                 ] }, p.id))
               ] })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("a", { className: "btn ghost", href: hardwareCsv({ ...data, assets: all }), download: "humyn-hardware-list.csv", children: all.length === data.assets.length ? "Export full hardware list" : `Export ${all.length} items` })
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("a", { className: "btn ghost", href: hardwareCsv({ ...data, assets: all }), download: "humyn-hardware-list.csv", children: all.length === data.assets.length ? "Export full hardware list" : `Export ${all.length} pieces` })
           ] })
         }
       ),

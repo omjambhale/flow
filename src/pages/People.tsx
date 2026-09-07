@@ -1,6 +1,6 @@
 import { useApp } from '../App'
-import { Card, Chip, Empty, Kpi, PageH, Ring, Row, ScoreBars, toneOf } from '../components/ui'
-import { avgScores, fmtHours, summarise, thisWeek } from '../derive'
+import { Card, Chip, Empty, Kpi, PageH, QualityScore, Row, toneOf } from '../components/ui'
+import { fmtHours, qualityScore, summarise, thisWeek } from '../derive'
 import { RecRow } from './Sites'
 
 export function OperatorPage({ siteId, id }: { siteId: string; id: string }) {
@@ -22,7 +22,7 @@ export function OperatorPage({ siteId, id }: { siteId: string; id: string }) {
         <Kpi label="All time" value={fmtHours(all.acceptedHours)} sub={`${all.acceptance}% accepted`} />
       </div>
       <Card className="mb">
-        <div className="ring-wrap"><Ring value={all.acceptance} size={160} /><ScoreBars {...avgScores(recs)} /></div>
+        <QualityScore value={qualityScore(recs)} />
       </Card>
       <Card title={`Workers · ${workers.length}`} className="mb">
         <div className="list">
@@ -87,7 +87,7 @@ export function SupervisorPage({ siteId, id }: { siteId: string; id: string }) {
         <Kpi label="All time" value={fmtHours(all.acceptedHours)} sub={`${all.acceptance}% accepted`} />
       </div>
       <Card className="mb">
-        <div className="ring-wrap"><Ring value={all.acceptance} size={160} /><ScoreBars {...avgScores(recs)} /></div>
+        <QualityScore value={qualityScore(recs)} />
       </Card>
       <Card title={`Operators under ${p.name.split(' ')[0]} · ${ops.length}`}>
         <div className="list">

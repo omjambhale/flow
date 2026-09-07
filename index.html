@@ -1035,16 +1035,16 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   <div class="onboard"><div class="wrap"><div class="main wide">
       <div class="eyebrow">Hardware · <span class="ui" style="text-transform:none;letter-spacing:0;font-weight:500">HL-MH-112</span> · Chakan Auto Parts, Unit 2</div>
       <h1>Hardware handover.</h1>
-      <p class="sub">Five steps, in order. Nothing ships until the custody schedule is signed, and custody only passes to you once you've checked every item against the list.</p>
+      <p class="sub">Six steps, in order. Nothing ships until the custody schedule is signed, and custody only passes to you once you've checked every item against the list and Humyn has matched your count to ours.</p>
       <div class="tracker" id="trk15"><div class="tk done"><div class="bar"></div><span>Applied</span></div><div class="tk done"><div class="bar"></div><span>Under review</span></div><div class="tk done"><div class="bar"></div><span>Agreement</span></div><div class="tk done"><div class="bar"></div><span>Sites</span></div><div class="tk done"><div class="bar"></div><span>Recce</span></div><div class="tk now"><div class="bar"></div><span>Hardware custody</span></div><div class="tk"><div class="bar"></div><span>Live</span></div></div>
       <div class="wiz" id="wiz-hw">
-        <aside class="wnav"><button class="wn on" data-pane="alloc"><span class="wnum">1</span><span>Your allocation</span></button><button class="wn" data-pane="custody"><span class="wnum">2</span><span>Custody schedule</span></button><button class="wn" data-pane="dispatch"><span class="wnum">3</span><span>Dispatch</span></button><button class="wn" data-pane="receive"><span class="wnum">4</span><span>Confirm receipt</span></button><button class="wn" data-pane="done"><span class="wnum">5</span><span>Custody confirmed</span></button></aside>
+        <aside class="wnav"><button class="wn on" data-pane="alloc"><span class="wnum">1</span><span>Your allocation</span></button><button class="wn" data-pane="custody"><span class="wnum">2</span><span>Custody schedule</span></button><button class="wn" data-pane="dispatch"><span class="wnum">3</span><span>Dispatch</span></button><button class="wn" data-pane="receive"><span class="wnum">4</span><span>Confirm receipt</span></button><button class="wn" data-pane="hwreview"><span class="wnum">5</span><span>Humyn review</span></button><button class="wn" data-pane="done"><span class="wnum">6</span><span>Custody confirmed</span></button></aside>
         <div class="panes">
 
           <div class="pane on" data-pane="alloc">
-            <div class="pane-h"><h2>Your allocation</h2><p>Sized from the approved recce: 16 tasks, about 40 participating workers across 2 shifts, 20-hour cap per worker. If a quantity or value looks wrong, dispute it before you sign — nothing here is final until you agree.</p></div>
+            <div class="pane-h"><h2>Your allocation</h2><p>Sized from the approved recce: 16 tasks, about 40 participating workers across 2 shifts, 20-hour cap per worker. If a quantity looks wrong, dispute it before you sign — nothing here is final until you agree. Unit values are fixed by Humyn's procurement.</p></div>
             <div class="tbl hwt" id="allocTbl"></div>
-            <div class="dbar" id="dbar" hidden><div><b id="dbarText">No lines changed yet</b><small id="dbarSub">Change a quantity or unit value in the table, then tell us why.</small></div><div class="acts"><button class="btn small ghost" id="disputeCancel">Cancel</button><button class="btn small" id="disputeSend" disabled>Send dispute to Humyn</button></div></div>
+            <div class="dbar" id="dbar" hidden><div><b id="dbarText">No lines changed yet</b><small id="dbarSub">Change a quantity in the table, then tell us why.</small></div><div class="acts"><button class="btn small ghost" id="disputeCancel">Cancel</button><button class="btn small" id="disputeSend" disabled>Send dispute to Humyn</button></div></div>
             <div class="dnote" id="dnote" hidden></div>
             <p class="help" style="margin-top:12px">Each camera ships as a set: 1 camera, 3 SD cards, 2 power banks, 1 head mount, 1 cable. Every item carries a QR asset tag. More devices can be added later based on collection efficiency.</p>
             <div class="pane-foot"><span></span><div style="display:flex;gap:10px"><button class="btn small coral" id="disputeBtn">Dispute allocation</button><button class="btn small dark" id="allocNext" data-pane-go="custody">Next</button></div></div>
@@ -1098,6 +1098,17 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
             <div class="dnote" id="recvNote"></div>
             <div class="f" style="margin-top:18px"><label>Unboxing photos <small>· at least one per box; add a photo of anything damaged</small></label><div class="in ph">https://…</div><button class="addrow">+ Add another photo</button></div>
             <div class="pane-foot"><button class="btn small ghost" data-pane-go="dispatch">Back</button><button class="btn" id="confirmHw">Confirm custody</button></div>
+          </div>
+
+          <div class="pane" data-pane="hwreview">
+            <div class="pane-h"><h2>Humyn review</h2><p id="hwrText">We match what you counted against the packing list, the courier's delivery record and your unboxing photos. Nothing more is needed from you.</p></div>
+            <div class="dnote" style="margin:0 0 18px"><span class="pill p-wait"><i></i>Under review</span><div><p id="hwrSummary"><b>Received: 164 of 164 items.</b> Submitted just now.</p></div></div>
+            <div class="tbl hwt" id="hwrTbl"></div>
+            <div class="stepline" style="margin-top:4px">
+              <p><b>What happens now.</b> Humyn checks the counts within one working day. If everything matches, custody is confirmed automatically and you get an email. If you reported anything short or damaged, Humyn raises the courier claim, arranges a replacement or a credit, and confirms custody of the rest — those items never enter your liability.</p>
+              <div class="sim">Demo control <button class="btn small ghost" id="simHwReview">Simulate Humyn's review</button></div>
+            </div>
+            <div class="pane-foot"><button class="btn small ghost" data-pane-go="receive">Back</button><span></span></div>
           </div>
 
           <div class="pane" data-pane="done">
@@ -1540,7 +1551,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     { item:'Lexar multi-card reader', ids:'HL-RD-0031, 0032', qty:2, unit:1652 },
     { item:'Charging / junction box', ids:'HL-JB-0007, 0008', qty:2, unit:3000 }
   ];
-  var REASONS = ['Too many for our workers', 'Too few for our workers', 'Unit value seems too high', 'We do not need this item', 'Something else'];
+  var REASONS = ['Too many for our workers', 'Too few for our workers', 'We do not need this item', 'Something else'];
   var disp = { mode:false, sent:false, resolved:false, rows:{} };   // rows[i] = {qty, unit, reason, note}
   var allocTotal = function(){ return ALLOC.reduce(function(t, r){ return t + r.qty * r.unit; }, 0); };
   var allocItems = function(){ return ALLOC.reduce(function(t, r){ return t + r.qty; }, 0); };
@@ -1556,7 +1567,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
       h += '<tr><td>' + r.item + '</td><td class="ui">' + r.ids + '</td>';
       if (editing) {
         h += '<td class="num"><input class="numin' + (qc ? ' chg' : '') + '" type="text" inputmode="numeric" data-i="' + i + '" data-k="qty" value="' + q + '">' + (qc ? '<span class="was">' + r.qty + '</span>' : '') + '</td>';
-        h += '<td class="num"><input class="numin' + (uc ? ' chg' : '') + '" type="text" inputmode="numeric" data-i="' + i + '" data-k="unit" value="' + u + '" style="width:92px">' + (uc ? '<span class="was">' + fmtIN(r.unit) + '</span>' : '') + '</td>';
+        h += '<td class="num">' + fmtIN(r.unit) + '</td>';
         h += '<td class="num' + (tc ? ' chg' : '') + '">' + fmtIN(q * u) + (tc ? '<span class="was">' + fmtIN(r.qty * r.unit) + '</span>' : '') + '</td>';
         h += '<td>' + (tc ? '<select class="sel' + (d.reason ? '' : ' miss') + '" data-i="' + i + '"><option value="">Why?</option>' + REASONS.map(function(x){ return '<option' + (d.reason === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' + (d.reason === 'Something else' ? '<input class="notein" data-i="' + i + '" placeholder="One line is enough" value="' + (d.note || '') + '">' : '') : '<span class="help">—</span>') + '</td>';
       } else {
@@ -1576,7 +1587,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     bar.hidden = !editing;
     if (editing) {
       document.getElementById('dbarText').textContent = ch.length ? ch.length + ' line' + (ch.length > 1 ? 's' : '') + ' changed · new total ' + fmtIN(prop) + (diff ? ' (' + (diff > 0 ? '+' : '') + fmtIN(diff) + ')' : '') : 'No lines changed yet';
-      document.getElementById('dbarSub').textContent = ch.length ? (ready ? 'Humyn replies within one working day. The custody schedule waits until this is settled.' : 'Pick a reason for each changed line to send.') : 'Change a quantity or unit value in the table, then tell us why.';
+      document.getElementById('dbarSub').textContent = ch.length ? (ready ? 'Humyn replies within one working day. The custody schedule waits until this is settled.' : 'Pick a reason for each changed line to send.') : 'Change a quantity in the table, then tell us why.';
       document.getElementById('disputeSend').disabled = !ready;
     }
     btn.hidden = disp.mode;
@@ -1595,10 +1606,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     var r = ALLOC[i], d = disp.rows[i] || {}; var q = d.qty != null ? d.qty : r.qty, u = d.unit != null ? d.unit : r.unit;
     var qc = q !== r.qty, uc = u !== r.unit, tc = qc || uc;
     var row = document.querySelectorAll('#allocTbl table tr')[+i + 1]; if (!row) return; var td = row.children;
-    var qi = td[2].querySelector('.numin'), ui = td[3].querySelector('.numin');
-    qi.classList.toggle('chg', qc); ui.classList.toggle('chg', uc);
+    var qi = td[2].querySelector('.numin');
+    qi.classList.toggle('chg', qc);
     var setWas = function(cell, on, text){ var w = cell.querySelector('.was'); if (on) { if (!w) { w = document.createElement('span'); w.className = 'was'; cell.appendChild(w); } w.textContent = text; } else if (w) w.remove(); };
-    setWas(td[2], qc, r.qty); setWas(td[3], uc, fmtIN(r.unit));
+    setWas(td[2], qc, r.qty);
     td[4].className = 'num' + (tc ? ' chg' : ''); td[4].innerHTML = fmtIN(q * u) + (tc ? '<span class="was">' + fmtIN(r.qty * r.unit) + '</span>' : '');
     if (tc && !td[5].querySelector('.sel')) td[5].innerHTML = '<select class="sel miss" data-i="' + i + '"><option value="">Why?</option>' + REASONS.map(function(x){ return '<option>' + x + '</option>'; }).join('') + '</select>';
     if (!tc) { td[5].innerHTML = '<span class="help">—</span>'; delete d.reason; }
@@ -1606,7 +1617,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     tot.className = 'num' + (diff ? ' chg' : ''); tot.innerHTML = '<b>' + fmtIN(prop) + '</b>' + (diff ? '<span class="was">' + fmtIN(cur) + '</span><span class="delta">' + (diff > 0 ? '+' : '') + fmtIN(diff) + '</span>' : '');
     var ch = changedRows(), ready = ch.length > 0 && ch.every(function(k){ return disp.rows[k].reason; });
     document.getElementById('dbarText').textContent = ch.length ? ch.length + ' line' + (ch.length > 1 ? 's' : '') + ' changed · new total ' + fmtIN(prop) + (diff ? ' (' + (diff > 0 ? '+' : '') + fmtIN(diff) + ')' : '') : 'No lines changed yet';
-    document.getElementById('dbarSub').textContent = ch.length ? (ready ? 'Humyn replies within one working day. The custody schedule waits until this is settled.' : 'Pick a reason for each changed line to send.') : 'Change a quantity or unit value in the table, then tell us why.';
+    document.getElementById('dbarSub').textContent = ch.length ? (ready ? 'Humyn replies within one working day. The custody schedule waits until this is settled.' : 'Pick a reason for each changed line to send.') : 'Change a quantity in the table, then tell us why.';
     document.getElementById('disputeSend').disabled = !ready;
   }
   document.getElementById('allocTbl').addEventListener('input', function(e){
@@ -1653,6 +1664,17 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     var again = document.querySelector('#recvTbl .numin[data-i="' + i + '"][data-k="' + k + '"]'); if (again && active) { var v = el.value; again.value = v; again.focus(); try { again.setSelectionRange(v.length, v.length); } catch(x){} }
   });
   document.getElementById('confirmHw').addEventListener('click', function(){
+    var w = document.getElementById('wiz-hw');
+    // what the partner confirmed, line by line, for Humyn to match
+    var missing = 0, damaged = 0, held = 0, h = '<table><tr><th>Item</th><th class="num">Sent</th><th class="num">You received</th><th class="num">Damaged</th><th>Humyn check</th></tr>';
+    ALLOC.forEach(function(r, i){ var v = recv[i] || { got: r.qty, dmg: 0 }; var short = Math.max(0, r.qty - v.got); missing += short; damaged += v.dmg; held += Math.min(v.got, r.qty) - v.dmg;
+      h += '<tr><td>' + r.item + '</td><td class="num">' + r.qty + '</td><td class="num">' + v.got + '</td><td class="num">' + (v.dmg || '—') + '</td><td>' + (short || v.dmg ? '<span class="issue">Claim with courier · ' + (short ? short + ' missing' : '') + (short && v.dmg ? ', ' : '') + (v.dmg ? v.dmg + ' damaged' : '') + '</span>' : '<span class="help">Matching against packing list</span>') + '</td></tr>'; });
+    document.getElementById('hwrTbl').innerHTML = h + '</table>';
+    document.getElementById('hwrSummary').innerHTML = '<b>Received: ' + held + ' of ' + allocItems() + ' items' + (missing + damaged ? ' · ' + (missing + damaged) + ' reported short or damaged' : '') + '.</b> Submitted just now — Humyn replies within one working day.';
+    paneGo(w, 'hwreview', true);
+  });
+  document.addEventListener('click', function(e){
+    if (!e.target.closest('#simHwReview')) return;
     var w = document.getElementById('wiz-hw'); paneGo(w, 'done', true);
     document.querySelectorAll('#trk15 .tk').forEach(function(t,k){ t.classList.remove('done','now'); if (k<6) t.classList.add('done'); if (k===6) t.classList.add('now'); });
   });

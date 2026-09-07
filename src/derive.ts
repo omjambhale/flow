@@ -56,6 +56,12 @@ export const avgScores = (recs: Recording[]): Scores => {
   return { camera: Math.round(s.camera / scored.length), task: Math.round(s.task / scored.length), coverage: Math.round(s.coverage / scored.length) }
 }
 
+export const qualityScore = (recs: Recording[]): number => {
+  const a = avgScores(recs)
+  const scored = recs.filter(r => r.scores).length
+  return scored ? Math.round((a.camera + a.task + a.coverage) / 3) : 0
+}
+
 export const thisWeek = (recs: Recording[]) => recs.filter(r => r.date > weekAgo)
 
 /* ----- sites ----- */
@@ -90,7 +96,7 @@ export const attentionReasons = (d: Dataset, s: Site): string[] => {
   if (sum.acceptance < 80) out.push(`Acceptance ${sum.acceptance}% this week`)
   if (s.presentToday < s.scheduledToday * 0.7) out.push(`Only ${s.presentToday} of ${s.scheduledToday} present today`)
   const missing = d.assets.filter(a => a.siteId === s.id && (a.status === 'missing' || a.status === 'damaged'))
-  if (missing.length) out.push(`${missing.length} hardware item${missing.length > 1 ? 's' : ''} missing or damaged`)
+  if (missing.length) out.push(`${missing.length} hardware missing or damaged`)
   return out
 }
 

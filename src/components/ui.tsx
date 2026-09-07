@@ -47,22 +47,36 @@ export function Spark({ data, w = 96, h = 28 }: { data: number[]; w?: number; h?
   )
 }
 
-export function Ring({ value, size = 180 }: { value: number; size?: number }) {
+export function Ring({ value, size = 180, label = 'accepted', good = 92, ok = 80, unit = '%' }: { value: number; size?: number; label?: string; good?: number; ok?: number; unit?: string }) {
   const r = size / 2 - 12
   const c = 2 * Math.PI * r
-  const tone = value >= 92 ? '#2F8F5B' : value >= 80 ? '#D98E04' : '#C43D2F'
+  const tone = value >= good ? '#2F8F5B' : value >= ok ? '#D98E04' : '#C43D2F'
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${value}% accepted`}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${value}% ${label}`}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#EFECE8" strokeWidth="14" />
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={tone} strokeWidth="14" strokeLinecap="round"
         strokeDasharray={`${c * value / 100} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
-      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fontFamily="Rethink Sans, sans-serif" fontWeight="700" fontSize={size / 5} fill="#161516">{value}%</text>
-      <text x="50%" y={size / 2 + size / 7} textAnchor="middle" fontSize="12" fill="#7A7672">accepted</text>
+      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fontFamily="Rethink Sans, sans-serif" fontWeight="700" fontSize={size / 5} fill="#161516">{value}{unit}</text>
+      <text x="50%" y={size / 2 + size / 7} textAnchor="middle" fontSize="12" fill="#7A7672">{label}</text>
     </svg>
   )
 }
 
 export const scoreTone = (v: number): Tone => v >= 85 ? 'green' : v >= 70 ? 'amber' : 'red'
+
+export function QualityScore({ value, prev }: { value: number; prev?: number }) {
+  const d = prev === undefined ? undefined : value - prev
+  return (
+    <div className="ring-wrap">
+      <Ring value={value} size={150} label="out of 100" good={85} ok={70} unit="" />
+      <div>
+        <div className="t" style={{ fontWeight: 700, fontSize: 16 }}>{value >= 85 ? 'Good' : value >= 70 ? 'Needs work' : 'Poor'}</div>
+        <div className="small muted" style={{ marginTop: 6, lineHeight: 1.5 }}>Humyn scores every reviewed recording out of 100 on how well the work was captured. 85 and above is good; below 70 hours start getting rejected.</div>
+        {d !== undefined && <div className={`small ${d < 0 ? 'red' : 'muted'}`} style={{ marginTop: 8 }}>{d >= 0 ? '+' : ''}{d} pts vs last week</div>}
+      </div>
+    </div>
+  )
+}
 
 export function ScoreBars({ camera, task, coverage }: { camera: number; task: number; coverage: number }) {
   const rows: [string, string, number][] = [

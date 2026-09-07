@@ -102,8 +102,8 @@ function SiteCard({ site }: { site: Site }) {
       <div className="dg" style={{ marginTop: 12 }}>
         <D e="Acceptance" v={`${week.acceptance}%`} tone={accTone(week.acceptance)} />
         <D e="Workers" v={siteWorkersWeek} small={`/ ${siteWorkers}`} tone={siteWorkersWeek < siteWorkers * 0.7 ? 'amber' : undefined} />
-        <D e="Equipment" v={camsOn} small={`/ ${cams.length} cameras`} tone={camsOn < cams.length ? 'amber' : undefined} />
-        <D e="Missing" v={risk.length || '—'} small={risk.length ? `item${risk.length > 1 ? 's' : ''} · ${fmtINR(assetValue(risk))}` : undefined} tone={risk.length ? 'red' : undefined} />
+        <D e="Hardware" v={camsOn} small={`/ ${cams.length} cameras`} tone={camsOn < cams.length ? 'amber' : undefined} />
+        <D e="Missing" v={risk.length || '—'} small={risk.length ? `hardware · ${fmtINR(assetValue(risk))}` : undefined} tone={risk.length ? 'red' : undefined} />
       </div>
     </Link>
   )
@@ -185,9 +185,9 @@ export function SiteDetail({ id }: { id: string }) {
         <Kpi label="Progress" value={`${pct(all.acceptedHours, target)}%`} sub={`${fmtHours(all.acceptedHours)} of ${fmtHours(target)}`} />
         <Kpi label="Acceptance" value={`${week.acceptance}%`} tone={accTone(week.acceptance)} sub="this week" />
         <Kpi label="Workers" value={`${site.presentToday}/${site.scheduledToday}`} sub="on the floor today" tone={presTone(site.presentToday, site.scheduledToday)} to={`/sites/${site.id}/today`} />
-        <Kpi label="Items" value={hw.length} sub={`${camsOn}/${cams.length} cameras recording`} subTone={camsOn < cams.length ? 'amber' : undefined} to={`/sites/${site.id}/hardware`} />
+        <Kpi label="Hardware" value={hw.length} sub={`${camsOn}/${cams.length} cameras recording`} subTone={camsOn < cams.length ? 'amber' : undefined} to={`/sites/${site.id}/hardware`} />
         <Kpi label="Upload" value={lagText(site.uploadLagMin)} tone={lagTone(site.uploadLagMin)} to={`/sites/${site.id}/today`} />
-        <Kpi label="Hardware" value={fmtINR(assetValue(hw))} sub={risk.length ? `${fmtINR(assetValue(risk))} at risk` : `${hw.length} items`} subTone={risk.length ? 'red' : undefined} to={`/sites/${site.id}/hardware`} />
+        <Kpi label="Hardware value" value={fmtINR(assetValue(hw))} sub={risk.length ? `${fmtINR(assetValue(risk))} at risk` : `${hw.length} pieces`} subTone={risk.length ? 'red' : undefined} to={`/sites/${site.id}/hardware`} />
       </div>
 
       <Card title={<>Process map <span className="muted small">· {site.process.name}</span></>} action={behind ? { to: `/sites/${site.id}/step/${behind.id}`, label: `Furthest behind: ${behind.name} · ${Math.round(stepDone(recs, behind))}h of ${stepExpected(behind)}h` } : undefined} className="mb">
@@ -209,7 +209,7 @@ export function SiteDetail({ id }: { id: string }) {
 
       <Card title="Task coverage" className="mb">
         <div className="tbl-wrap"><table className="tbl">
-          <thead><tr><th>Task</th><th>Step</th><th className="num">Hours</th><th className="num">Share</th><th className="num">Workers</th><th className="num">Over cap</th><th className="num">Room left</th><th></th></tr></thead>
+          <thead><tr><th>Task</th><th>Step</th><th className="num">Hours</th><th className="num">Share</th><th className="num">Workers</th><th className="num">Over cap</th><th></th></tr></thead>
           <tbody>{coverage.map(c => (
             <tr key={c.task.id} className="click" onClick={() => go(`/sites/${site.id}/step/${c.step.id}`)}>
               <td><Link to={`/sites/${site.id}/step/${c.step.id}`}>{c.task.name}</Link></td>
@@ -218,7 +218,6 @@ export function SiteDetail({ id }: { id: string }) {
               <td className="num"><div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}><span className="bar thin" style={{ width: 60 }}><i style={{ width: `${Math.min(100, c.share * 3)}%` }} /></span>{c.share}%</div></td>
               <td className={`num ${c.workers < c.expectedWorkers ? 'amber' : ''}`}>{c.workers}<span className="muted"> / {c.expectedWorkers}</span></td>
               <td className={`num ${c.overCap ? 'red' : ''}`}>{c.overCap ? `${c.overCap} · ${fmtHours(c.overHours)} not counted` : '—'}</td>
-              <td className="num">{c.room ? fmtHours(c.room) : '—'}</td>
               <td className="arrow">›</td>
             </tr>
           ))}</tbody>
@@ -436,7 +435,7 @@ export function SiteHardware({ id }: { id: string }) {
     <>
       <PageH title="Hardware" sub={`${site.name} · Humyn's equipment in your custody`} />
       <div className="kpis k4">
-        <Kpi label="Items" value={hw.length} sub={hw[0]?.status === 'transit' ? 'in transit' : 'in custody'} />
+        <Kpi label="Hardware" value={hw.length} sub={hw[0]?.status === 'transit' ? 'in transit' : 'in custody'} />
         <Kpi label="Value" value={fmtINR(assetValue(hw))} sub="you are liable for this" />
         <Kpi label="At risk" value={risk.length ? fmtINR(assetValue(risk)) : '₹0'} sub={`${risk.length} missing or damaged`} tone={risk.length ? 'red' : undefined} />
         <Kpi label="Idle cameras" value={idle.length} sub="no output this week" tone={idle.length ? 'amber' : undefined} />
