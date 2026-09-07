@@ -67,3 +67,38 @@ export function WorkerPage({ siteId, opId, id }: { siteId: string; opId: string;
     </>
   )
 }
+
+export function SupervisorPage({ siteId, id }: { siteId: string; id: string }) {
+  const { data } = useApp()
+  const p = data.people.find(x => x.id === id)
+  const site = data.sites.find(x => x.id === siteId)
+  if (!p || !site) return <Empty title="Supervisor not found" />
+  const recs = data.recordings.filter(r => r.siteId === siteId)
+  const week = summarise(thisWeek(recs))
+  const all = summarise(recs)
+  const ops = data.people.filter(o => o.role === 'operator' && o.siteId === siteId)
+  const workers = data.people.filter(w => w.role === 'worker' && w.active && w.siteId === siteId).length
+  return (
+    <>
+      <PageH title={p.name} sub={`Supervisor · ${site.name}${p.phone ? ` · ${p.phone}` : ''}`} right={<Chip tone={toneOf(week.quality)}>{week.quality} this week</Chip>} />
+      <div className="kpis k3">
+        <Kpi label="Accepted this week" value={fmtHours(week.acceptedHours)} sub={`${week.count} recordings`} />
+        <Kpi label="Team" value={`${ops.filter(o => o.active).length} operators`} sub={`${workers} workers`} />
+        <Kpi label="All time" value={fmtHours(all.acceptedHours)} sub={`${all.acceptance}% accepted`} />
+      </div>
+      <Card className="mb">
+        <div className="ring-wrap"><Ring value={all.acceptance} size={160} /><ScoreBars {...avgScores(recs)} /></div>
+      </Card>
+      <Card title={`Operators under ${p.name.split(' ')[0]} · ${ops.length}`}>
+        <div className="list">
+          {ops.map(o => {
+            const s = summarise(thisWeek(recs.filter(r => r.operatorId === o.id)))
+            const cams = data.assets.filter(a => a.holderId === o.id && a.type === 'camera')
+            return <Row key={o.id} to={`/sites/${siteId}/operator/${o.id}`} title={o.name} sub={o.active ? `${data.people.filter(w => w.reportsTo === o.id && w.active).length} workers · ${cams.map(c => c.id).join(', ') || 'no camera'}` : 'Deactivated'}
+              chip={o.active ? <Chip tone={toneOf(s.quality)}>{s.quality}</Chip> : <Chip tone="grey">Inactive</Chip>} end={fmtHours(s.acceptedHours)} endSub="this week" />
+          })}
+        </div>
+      </Card>
+    </>
+  )
+}

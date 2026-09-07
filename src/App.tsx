@@ -4,7 +4,7 @@ import { dataset } from './data'
 import type { Dataset } from './types'
 import { Payments, Invoice } from './pages/Payments'
 import { Sites, SiteDetail, StepDetail, SiteHardware, SiteToday, SitePeople } from './pages/Sites'
-import { OperatorPage, WorkerPage } from './pages/People'
+import { OperatorPage, WorkerPage, SupervisorPage } from './pages/People'
 import { RecordingPage } from './pages/Recording'
 import { Performance, Workers, ReasonList } from './pages/Performance'
 import { Hardware } from './pages/Hardware'
@@ -80,13 +80,14 @@ function Crumbs() {
   let m: Record<string, string> | null
   if ((m = match('/payments/:id', path))) parts.push({ to: '/payments', label: 'Payments' }, { label: `Invoice ${m.id}` })
   else if ((m = match('/sites/:id', path)) || (m = match('/sites/:id/:block', path)) || (m = match('/sites/:id/step/:step', path))
-    || (m = match('/sites/:id/operator/:op', path)) || (m = match('/sites/:id/operator/:op/worker/:w', path))) {
+    || (m = match('/sites/:id/operator/:op', path)) || (m = match('/sites/:id/operator/:op/worker/:w', path)) || (m = match('/sites/:id/supervisor/:sup', path))) {
     const s = site(m.id)
     parts.push({ to: '/sites', label: 'Sites' }, { to: `/sites/${m.id}`, label: s?.name ?? m.id })
     if (m.block) parts.push({ label: { people: 'People', hardware: 'Hardware', today: 'Today' }[m.block] ?? m.block })
     if (m.step) parts.push({ label: s?.process.steps.find(x => x.id === m!.step)?.name ?? 'Step' })
     if (m.op) parts.push({ to: `/sites/${m.id}/operator/${m.op}`, label: person(m.op)?.name ?? 'Operator' })
     if (m.w) parts.push({ label: person(m.w)?.name ?? 'Worker' })
+    if (m.sup) parts.push({ label: person(m.sup)?.name ?? 'Supervisor' })
   } else if ((m = match('/recording/:id', path))) {
     const r = data.recordings.find(x => x.id === m!.id)
     parts.push({ to: '/sites', label: 'Sites' })
@@ -126,6 +127,7 @@ function Routes() {
   if ((m = match('/sites/:id/hardware', path))) return <SiteHardware id={m.id} />
   if ((m = match('/sites/:id/today', path))) return <SiteToday id={m.id} />
   if ((m = match('/sites/:id/step/:step', path))) return <StepDetail id={m.id} step={m.step} />
+  if ((m = match('/sites/:id/supervisor/:sup', path))) return <SupervisorPage siteId={m.id} id={m.sup} />
   if ((m = match('/sites/:id/operator/:op', path))) return <OperatorPage siteId={m.id} id={m.op} />
   if ((m = match('/sites/:id/operator/:op/worker/:w', path))) return <WorkerPage siteId={m.id} opId={m.op} id={m.w} />
   if ((m = match('/recording/:id', path))) return <RecordingPage id={m.id} />

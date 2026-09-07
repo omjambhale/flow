@@ -1,5 +1,5 @@
 import { useApp } from '../App'
-import { Link } from '../router'
+import { Link, useRoute } from '../router'
 import { Bar, Card, Chip, D, Empty, ExpectedActual, Kpi, PageH, Row, toneOf, type Tone } from '../components/ui'
 import { HBars } from '../components/charts'
 import type { Site, Step } from '../types'
@@ -14,6 +14,19 @@ const lagTone = (min: number): Tone | undefined => min > 1440 ? 'red' : min > 24
 const accTone = (a: number): Tone | undefined => a < 80 ? 'red' : a < 92 ? 'amber' : undefined
 const presTone = (p: number, s: number): Tone | undefined => s === 0 ? undefined : p < s * 0.7 ? 'red' : p < s * 0.9 ? 'amber' : undefined
 
+/** CSV of everything worth keeping from a finished site — summary, then hours by step. */
+const siteReportUrl = (site: Site) => {
+  const rows: string[][] = [
+    ['Site', site.name], ['Site ID', site.id], ['Location', `${site.city}, ${site.state}`], ['Type', site.type],
+    ['Started', site.startedOn], ['Closed', site.closedOn ?? ''], ['Process', site.process.name],
+    ['Accepted hours', String(site.finalHours ?? 0)], ['Rate per hour (INR)', String(site.ratePerHour)], ['Paid (INR)', String(site.paidTotal ?? 0)], [],
+    ['Step', 'Name', 'Tasks', 'Expected hours'],
+    ...site.process.steps.map(st => [String(st.order), st.name, st.tasks.map(t => t.name).join('; '), String(stepExpected(st))]),
+  ]
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+  return 'data:text/csv;charset=utf-8,' + encodeURIComponent('\ufeff' + csv)
+}
+
 /* ---------- level 0: live sites first, onboarding folded ---------- */
 
 export function Sites() {
@@ -26,25 +39,23 @@ export function Sites() {
   const cams = data.assets.filter(a => a.type === 'camera' && a.status !== 'transit')
   const camsOn = cams.filter(a => a.status === 'in-use').length
   const risk = assetsAtRisk(data)
-  const lagSites = live.filter(s => s.uploadLagMin > 1440).length
-  const present = live.reduce((s, x) => s + x.presentToday, 0), sched = live.reduce((s, x) => s + x.scheduledToday, 0)
+  const workersTotal = data.people.filter(p => p.role === 'worker' && p.active && live.some(s => s.id === p.siteId)).length
+  const workersThisWeek = new Set(thisWeek(data.recordings).map(r => r.workerId)).size
   return (
     <>
-      <PageH title="Sites" sub={`${live.length} live · ${onboarding.length} setting up`} right={<a href="/" className="btn ghost">+ Add a site</a>} />
-      <div className="kpis">
+      <PageH title="Sites" right={<a href="/" className="btn ghost">+ Add a site</a>} />
+      <div className="kpis k4">
         <Kpi label="Accepted this week" value={fmtHours(week.acceptedHours)} sub={`${fmtHours(summarise(data.recordings).acceptedHours)} all time`} to="/performance" />
         <Kpi label="Acceptance" value={`${week.acceptance}%`} tone={accTone(week.acceptance)} sub={`${week.bad} need work`} to="/performance" />
-        <Kpi label="Present today" value={present} sub={`of ${sched}`} tone={presTone(present, sched)} />
-        <Kpi label="Cameras recording" value={`${camsOn}/${cams.length}`} tone={camsOn < cams.length ? 'amber' : undefined} to="/hardware" />
-        <Kpi label="Upload behind" value={lagSites} sub={lagSites ? 'sites > 1 day' : 'all synced'} tone={lagSites ? 'red' : undefined} />
-        <Kpi label="Hardware at risk" value={fmtINR(assetValue(risk))} sub={`${risk.length} items`} tone={risk.length ? 'red' : undefined} to="/hardware" />
+        <Kpi label="Workers recording" value={`${workersThisWeek}/${workersTotal}`} sub="this week" tone={workersThisWeek < workersTotal * 0.7 ? 'amber' : undefined} to="/performance/workers" />
+        <Kpi label="Cameras recording" value={`${camsOn}/${cams.length}`} sub={risk.length ? `${risk.length} missing or damaged` : 'all accounted for'} subTone={risk.length ? 'red' : undefined} tone={camsOn < cams.length ? 'amber' : undefined} to="/hardware" />
       </div>
       <div className="sites">
         {live.length === 0 && <Card><Empty title="No live sites yet" /></Card>}
         {live.map(s => <SiteCard key={s.id} site={s} />)}
       </div>
       {onboarding.length > 0 && (
-        <details className="card fold mt" open={live.length === 0}>
+        <details className="card fold mt" open>
           <summary>Setting up · {onboarding.length}</summary>
           <div className="onb">
             {onboarding.map(s => <OnboardingRow key={s.id} site={s} />)}
@@ -80,6 +91,8 @@ function SiteCard({ site }: { site: Site }) {
   const cams = data.assets.filter(a => a.siteId === site.id && a.type === 'camera')
   const camsOn = cams.filter(a => a.status === 'in-use').length
   const risk = assetsAtRisk(data, site.id)
+  const siteWorkers = data.people.filter(p => p.role === 'worker' && p.active && p.siteId === site.id).length
+  const siteWorkersWeek = new Set(thisWeek(recs).map(r => r.workerId)).size
   const dot: Tone = health === 'attention' ? 'red' : 'green'
   return (
     <Link to={`/sites/${site.id}`} className="card sitec">
@@ -88,13 +101,9 @@ function SiteCard({ site }: { site: Site }) {
       <Bar value={all.acceptedHours} max={target} tone={all.acceptedHours >= target ? 'green' : undefined} label={[`${fmtHours(all.acceptedHours)} of ${fmtHours(target)} target`, `${pct(all.acceptedHours, target)}%`]} />
       <div className="dg" style={{ marginTop: 12 }}>
         <D e="Acceptance" v={`${week.acceptance}%`} tone={accTone(week.acceptance)} />
-        <D e="Present" v={site.presentToday} small={`/ ${site.scheduledToday}`} tone={presTone(site.presentToday, site.scheduledToday)} />
-        <D e="Cameras" v={camsOn} small={`/ ${cams.length}`} tone={camsOn < cams.length ? 'amber' : undefined} />
-        <D e="Upload" v={lagText(site.uploadLagMin)} tone={lagTone(site.uploadLagMin)} />
-        <D e="This week" v={fmtHours(week.acceptedHours)} />
-        <D e="Need work" v={week.bad} tone={week.bad > 3 ? 'amber' : undefined} />
-        <D e="Hardware" v={fmtINR(assetValue(data.assets.filter(a => a.siteId === site.id)))} />
-        <D e="At risk" v={risk.length ? fmtINR(assetValue(risk)) : '—'} tone={risk.length ? 'red' : undefined} />
+        <D e="Workers" v={siteWorkersWeek} small={`/ ${siteWorkers}`} tone={siteWorkersWeek < siteWorkers * 0.7 ? 'amber' : undefined} />
+        <D e="Equipment" v={camsOn} small={`/ ${cams.length} cameras`} tone={camsOn < cams.length ? 'amber' : undefined} />
+        <D e="Missing" v={risk.length || '—'} small={risk.length ? `item${risk.length > 1 ? 's' : ''} · ${fmtINR(assetValue(risk))}` : undefined} tone={risk.length ? 'red' : undefined} />
       </div>
     </Link>
   )
@@ -118,6 +127,7 @@ function OnboardingRow({ site }: { site: Site }) {
 
 export function SiteDetail({ id }: { id: string }) {
   const { data } = useApp()
+  const { go } = useRoute()
   const site = data.sites.find(s => s.id === id)
   if (!site) return <Empty title="Site not found" />
   const health = siteHealth(data, site)
@@ -134,12 +144,14 @@ export function SiteDetail({ id }: { id: string }) {
   const behind = [...steps].sort((a, b) => (stepDone(recs, a) / stepExpected(a)) - (stepDone(recs, b) / stepExpected(b)))[0]
   const workers = workerStats(data, recs).sort((a, b) => b.acceptedHours - a.acceptedHours)
   const ops = data.people.filter(p => p.siteId === site.id && p.role === 'operator' && p.active)
+  const sups = data.people.filter(p => p.siteId === site.id && p.role === 'supervisor' && p.active)
   const bad = recs.filter(r => r.status === 'rejected').sort((a, b) => b.date.localeCompare(a.date))
   const reasons = byReason(thisWeek(recs))
   if (site.stage === 'closed') {
     return (
       <>
-        <PageH title={site.name} sub={`${site.id} · ${site.city}, ${site.state} · ${site.type} · ${fmtDate(site.startedOn)} – ${fmtDate(site.closedOn)}`} right={<Chip tone="grey">Completed</Chip>} />
+        <PageH title={site.name} sub={`${site.id} · ${site.city}, ${site.state} · ${site.type} · ${fmtDate(site.startedOn)} – ${fmtDate(site.closedOn)}`}
+          right={<div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><Chip tone="grey">Completed</Chip><a className="btn ghost" href={siteReportUrl(site)} download={`${site.id}-${site.name.replace(/\s+/g, '-')}-report.csv`}>Download site report</a></div>} />
         <div className="kpis k4">
           <Kpi label="Accepted" value={fmtHours(site.finalHours ?? 0)} sub="all time" />
           <Kpi label="Paid" value={fmtINR(site.paidTotal ?? 0)} sub={`${fmtINR(site.ratePerHour)} per hour`} />
@@ -194,56 +206,68 @@ export function SiteDetail({ id }: { id: string }) {
         </div>
       </Card>
 
-      <div className="cgrid mb">
-        <Card title={`Workers · ${workers.length}`} action={{ to: `/sites/${site.id}/people`, label: 'All people' }}>
-          <div className="tbl-wrap"><table className="tbl">
-            <thead><tr><th>Worker</th><th className="num">Hours</th><th className="num">Accepted</th><th>Issue</th></tr></thead>
-            <tbody>
-              {workers.slice(0, 8).map(w => (
-                <tr key={w.id}>
-                  <td><Link to={`/sites/${site.id}/operator/${w.operatorId}/worker/${w.id}`}>{w.name}</Link></td>
-                  <td className="num">{fmtHours(w.acceptedHours)}</td>
-                  <td className={`num ${accTone(w.acceptance) ?? ''}`}>{w.acceptance}%</td>
-                  <td className="muted small">{w.acceptance < 92 && w.mainIssue ? w.mainIssue : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
-        </Card>
-        <Card title={`Needs work this week · ${week.bad}`} action={{ to: '/performance', label: 'Analysis' }}>
-          <div className="cpad">
-            {reasons.length === 0 ? <Empty title="Nothing rejected this week" /> : <HBars data={reasons.map(r => ({ label: r.reason, value: r.hours, hint: `${r.count} recordings` }))} format={v => fmtHours(v)} />}
-          </div>
-        </Card>
-      </div>
-
-      <div className="cgrid mb">
-        <Card title={`Operators and cameras · ${ops.length}`} action={{ to: `/sites/${site.id}/hardware`, label: 'Hardware' }}>
-          <div className="tbl-wrap"><table className="tbl">
-            <thead><tr><th>Operator</th><th className="num">Workers</th><th className="num">This week</th><th className="num">Accepted</th><th>Camera</th></tr></thead>
-            <tbody>
-              {ops.map(p => {
-                const s = summarise(thisWeek(recs.filter(r => r.operatorId === p.id)))
-                const cam = cams.filter(c => c.holderId === p.id)
-                return (
-                  <tr key={p.id}>
-                    <td><Link to={`/sites/${site.id}/operator/${p.id}`}>{p.name}</Link></td>
-                    <td className="num">{data.people.filter(w => w.reportsTo === p.id && w.active).length}</td>
-                    <td className="num">{fmtHours(s.acceptedHours)}</td>
-                    <td className={`num ${accTone(s.acceptance) ?? ''}`}>{s.acceptance}%</td>
-                    <td className="small">{cam.map(c => <span key={c.id} className={c.status === 'in-use' ? '' : 'amber'}>{c.id}{c.status !== 'in-use' ? ` (${c.status})` : ''} </span>)}</td>
+      <div className="cgrid">
+        <div>
+          <Card title={`Your team here · ${sups.length + ops.length}`} action={{ to: `/sites/${site.id}/people`, label: 'All people' }} className="mb">
+            <div className="tbl-wrap"><table className="tbl">
+              <thead><tr><th>Person</th><th>Role</th><th className="num">Workers</th><th className="num">This week</th><th className="num">Accepted</th><th>Cameras</th><th></th></tr></thead>
+              <tbody>
+                {sups.map(p => (
+                  <tr key={p.id} className="click" onClick={() => go(`/sites/${site.id}/supervisor/${p.id}`)}>
+                    <td><Link to={`/sites/${site.id}/supervisor/${p.id}`}>{p.name}</Link></td><td className="small muted">Supervisor</td>
+                    <td className="num">{data.people.filter(w => w.role === 'worker' && w.active && w.siteId === site.id).length}</td>
+                    <td className="num">{fmtHours(week.acceptedHours)}</td>
+                    <td className={`num ${accTone(week.acceptance) ?? ''}`}>{week.acceptance}%</td>
+                    <td className="small muted">runs the site</td>
+                    <td className="arrow">›</td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table></div>
-        </Card>
-        <Card title={`Latest rejections · ${bad.length} total`}>
-          <div className="list">
-            {bad.slice(0, 5).map(r => <RecRow key={r.id} id={r.id} hideSite />)}
-            {bad.length === 0 && <Empty title="No rejections" />}
-          </div>
-        </Card>
+                ))}
+                {ops.map(p => {
+                  const s = summarise(thisWeek(recs.filter(r => r.operatorId === p.id)))
+                  const cam = cams.filter(c => c.holderId === p.id)
+                  return (
+                    <tr key={p.id} className="click" onClick={() => go(`/sites/${site.id}/operator/${p.id}`)}>
+                      <td><Link to={`/sites/${site.id}/operator/${p.id}`}>{p.name}</Link></td><td className="small muted">Operator</td>
+                      <td className="num">{data.people.filter(w => w.reportsTo === p.id && w.active).length}</td>
+                      <td className="num">{fmtHours(s.acceptedHours)}</td>
+                      <td className={`num ${accTone(s.acceptance) ?? ''}`}>{s.acceptance}%</td>
+                      <td className="small">{cam.map(c => <span key={c.id} className={c.status === 'in-use' ? '' : 'amber'}>{c.id}{c.status !== 'in-use' ? ` (${c.status})` : ''} </span>)}</td>
+                      <td className="arrow">›</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table></div>
+          </Card>
+          <Card title={`Latest rejections · ${bad.length} total`}>
+            <div className="list">
+              {bad.slice(0, 5).map(r => <RecRow key={r.id} id={r.id} hideSite />)}
+              {bad.length === 0 && <Empty title="No rejections" />}
+            </div>
+          </Card>
+        </div>
+        <div>
+          <Card title={`Needs work this week · ${week.bad}`} action={{ to: '/performance', label: 'Analysis' }} className="mb">
+            <div className="cpad">
+              {reasons.length === 0 ? <Empty title="Nothing rejected this week" /> : <HBars data={reasons.map(r => ({ label: r.reason, value: r.hours, hint: `${r.count} recordings` }))} format={v => fmtHours(v)} />}
+            </div>
+          </Card>
+          <Card title={`Workers who need help`} action={{ to: `/sites/${site.id}/people`, label: 'All workers' }}>
+            <div className="tbl-wrap"><table className="tbl">
+              <thead><tr><th>Worker</th><th>Operator</th><th className="num">Accepted</th><th>Issue</th></tr></thead>
+              <tbody>
+                {[...workers].sort((a, b) => a.acceptance - b.acceptance).slice(0, 5).map(w => (
+                  <tr key={w.id} className="click" onClick={() => go(`/sites/${site.id}/operator/${w.operatorId}/worker/${w.id}`)}>
+                    <td><Link to={`/sites/${site.id}/operator/${w.operatorId}/worker/${w.id}`}>{w.name}</Link></td>
+                    <td className="small muted">{data.people.find(p => p.id === w.operatorId)?.name}</td>
+                    <td className={`num ${accTone(w.acceptance) ?? ''}`}>{w.acceptance}%</td>
+                    <td className="small muted">{w.mainIssue ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table></div>
+          </Card>
+        </div>
       </div>
     </>
   )

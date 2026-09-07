@@ -496,7 +496,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .plist{display:grid;gap:8px;margin-bottom:8px}
 .prow{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:12px}
 .prow .pn{font-family:var(--ui);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--coral)}
-.prow .in{height:48px;outline:none}
+.prow .in{height:48px;outline:none;display:flex;align-items:center}
 .prow .in:focus{border-color:var(--coral)}
 .prow .rm{font-size:13px;color:var(--soft);padding:6px 8px}
 .prow .rm:hover{color:var(--ink)}
@@ -508,6 +508,38 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .pdots i{width:22px;height:4px;border-radius:2px;background:var(--line)}
 .pdots i.d{background:var(--ink)}
 .pdots i.n{background:var(--coral)}
+
+/* hardware: dispute + reconciliation tables */
+.hwt table{width:100%;min-width:760px}
+.hwt td:first-child,.hwt th{white-space:nowrap}
+.hwt td{vertical-align:middle;padding:14px 12px}
+.hwt td.ui{font-size:14px}
+.hwt th.num,.hwt td.num{text-align:right;white-space:nowrap}
+.hwt td.num.chg{color:var(--coral);font-weight:600}
+.hwt .was{display:block;font-size:12px;color:var(--soft);text-decoration:line-through;font-weight:400}
+.hwt .delta{display:block;font-size:12px;color:var(--coral);font-weight:500}
+.numin{width:64px;height:38px;border:1px solid var(--line);border-radius:4px;text-align:right;font:inherit;font-size:16px;padding:0 10px;background:#fff;color:var(--ink)}
+.numin:focus{outline:none;border-color:var(--coral)}
+.numin.chg{border-color:var(--coral);background:var(--coral-tint);font-weight:600}
+.numin.bad{border-color:var(--red);background:var(--red-tint)}
+.sel{height:38px;border:1px solid var(--line);border-radius:4px;font:inherit;font-size:13px;padding:0 6px;background:#fff;color:var(--ink);width:150px}
+.sel:focus{outline:none;border-color:var(--coral)}
+.sel.miss{border-color:var(--amber)}
+.notein{height:38px;border:1px solid var(--line);border-radius:4px;font:inherit;font-size:14px;padding:0 10px;background:#fff;width:100%;margin-top:6px}
+.btn.coral{background:transparent;border:1px solid var(--coral);color:var(--coral)}.btn.coral:hover{background:var(--coral-tint)}
+.dbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border:1px solid var(--coral);background:var(--coral-tint);border-radius:4px;margin:-26px 0 14px}
+.dbar b{display:block;font-size:16px;font-weight:600}
+.dbar small{display:block;font-size:14px;color:var(--mid);margin-top:2px}
+.dbar .acts{display:flex;gap:10px;flex:none}
+.dnote{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border:1px solid var(--line);border-radius:4px;background:var(--warm);margin:-26px 0 14px}
+.dnote[hidden]{display:none}
+.dnote .pill{flex:none;margin-top:2px}
+.dnote p{margin:0;font-size:15px;line-height:1.5;color:var(--char)}
+.dnote p b{color:var(--ink)}
+.dnote .sim{margin:8px 0 0;padding:0;border:0;background:none}
+.hwt .issue{font-size:13px;color:var(--red);font-weight:500;white-space:nowrap}
+.hwt .ok{font-size:13px;color:var(--green);font-weight:500;white-space:nowrap}
+.hwt tr.tot td{font-weight:600}
 
 /* wizard */
 .main.wide{max-width:1240px}
@@ -813,7 +845,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
           <li>40 × power bank (HL-PB-2201 to 2240)</li>
           <li>20 × head mount, 20 × USB-C cable, 2 × card reader, 2 × charging box</li>
         </ul>
-        <p>164 items, total value ₹1,008,024. No items were reported missing or damaged.</p>
+        <p>164 items, total value ₹10,08,024. No items were reported missing or damaged.</p>
         <p>From today, every issue and return is recorded in the HumynOperator app, and we reconcile with you weekly. Your training session is on 18 Sept at 10:00.</p>
         <div class="attach"><span class="ico">PDF</span><div><b>Custody confirmation · HL-MH-112.pdf</b><small>signed by both parties</small></div></div>
         <p><button class="btn" data-href="/dashboard/">Open your dashboard</button></p>
@@ -1010,14 +1042,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
         <div class="panes">
 
           <div class="pane on" data-pane="alloc">
-            <div class="pane-h"><h2>Your allocation</h2><p>Sized from the approved recce: 16 tasks, about 40 participating workers across 2 shifts, 20-hour cap per worker.</p></div>
-            <div class="tbl"><table>
-              <tr><th>Item</th><th>Asset IDs</th><th class="num">Qty</th><th class="num">Unit value</th><th class="num">Value</th></tr>
-              <tr><td>GoPro Hero 13 camera</td><td class="ui">HL-CAM-1301 … 1320</td><td class="num">20</td><td class="num">₹31,300</td><td class="num">₹626,000</td></tr><tr><td>Lexar 256 GB SD card</td><td class="ui">HL-SD-4011 … 4070</td><td class="num">60</td><td class="num">₹5,015</td><td class="num">₹300,900</td></tr><tr><td>Power bank 10,000 mAh</td><td class="ui">HL-PB-2201 … 2240</td><td class="num">40</td><td class="num">₹1,595</td><td class="num">₹63,800</td></tr><tr><td>Head mount</td><td class="ui">HL-HM-0901 … 0920</td><td class="num">20</td><td class="num">₹283</td><td class="num">₹5,660</td></tr><tr><td>USB-C cable, 2 m</td><td class="ui">HL-CB-0501 … 0520</td><td class="num">20</td><td class="num">₹118</td><td class="num">₹2,360</td></tr><tr><td>Lexar multi-card reader</td><td class="ui">HL-RD-0031, 0032</td><td class="num">2</td><td class="num">₹1,652</td><td class="num">₹3,304</td></tr><tr><td>Charging / junction box</td><td class="ui">HL-JB-0007, 0008</td><td class="num">2</td><td class="num">₹3,000</td><td class="num">₹6,000</td></tr>
-              <tr><td colspan="4"><b>Total in your custody</b></td><td class="num"><b>₹1,008,024</b></td></tr>
-            </table></div>
+            <div class="pane-h"><h2>Your allocation</h2><p>Sized from the approved recce: 16 tasks, about 40 participating workers across 2 shifts, 20-hour cap per worker. If a quantity or value looks wrong, dispute it before you sign — nothing here is final until you agree.</p></div>
+            <div class="tbl hwt" id="allocTbl"></div>
+            <div class="dbar" id="dbar" hidden><div><b id="dbarText">No lines changed yet</b><small id="dbarSub">Change a quantity or unit value in the table, then tell us why.</small></div><div class="acts"><button class="btn small ghost" id="disputeCancel">Cancel</button><button class="btn small" id="disputeSend" disabled>Send dispute to Humyn</button></div></div>
+            <div class="dnote" id="dnote" hidden></div>
             <p class="help" style="margin-top:12px">Each camera ships as a set: 1 camera, 3 SD cards, 2 power banks, 1 head mount, 1 cable. Every item carries a QR asset tag. More devices can be added later based on collection efficiency.</p>
-            <div class="pane-foot"><span></span><button class="btn small dark" data-pane-go="custody">Next</button></div>
+            <div class="pane-foot"><span></span><div style="display:flex;gap:10px"><button class="btn small coral" id="disputeBtn">Dispute allocation</button><button class="btn small dark" id="allocNext" data-pane-go="custody">Next</button></div></div>
           </div>
 
           <div class="pane" data-pane="custody">
@@ -1026,7 +1056,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
               <div class="doc" style="max-height:60vh">
                 <div class="doc-h"><span class="eyebrow">Annex A to the Partnership Agreement</span><h2>Hardware Custody Schedule</h2><p>Between <b>Humynai Private Limited</b> (the “Company”) and <b>Kulkarni Field Ops</b> (the “Partner”) for site <b>HL-MH-112, Chakan Auto Parts, Unit 2</b>.</p></div>
                 <h3>1. Equipment</h3>
-                <p>The Company places the equipment listed in Schedule 1 (20 camera sets and accessories, total value ₹1,008,024) in the Partner's custody for egocentric data collection at the site above. Title remains with the Company at all times.</p>
+                <p>The Company places the equipment listed in Schedule 1 (<span data-hw="sets">20</span> camera sets and accessories, total value <span data-hw="total">₹10,08,024</span>) in the Partner's custody for egocentric data collection at the site above. Title remains with the Company at all times.</p>
                 <h3>2. Custody</h3>
                 <p>Custody passes to the Partner when the Partner confirms receipt of each item on the portal, and returns to the Company when the Company confirms receipt back. Every item is identified by its asset tag. The Partner keeps equipment in the lockable store room recorded in the recce when not in use.</p>
                 <h3>3. Daily use</h3>
@@ -1063,16 +1093,15 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
           </div>
 
           <div class="pane" data-pane="receive">
-            <div class="pane-h"><h2>Confirm receipt</h2><p>Open every box and tick each line once you've counted it against the packing list. Scan the QR tags in the HumynOperator app, or tick here.</p></div>
-            <div class="chklist" id="hwChecks"><label class="chk"><input type="checkbox"><span class="box"></span><span><b>GoPro Hero 13 camera</b><small>20 units · HL-CAM-1301 … 1320</small></span><span class="help">20 / 20</span></label><label class="chk"><input type="checkbox"><span class="box"></span><span><b>Lexar 256 GB SD card</b><small>60 units · HL-SD-4011 … 4070</small></span><span class="help">60 / 60</span></label><label class="chk"><input type="checkbox"><span class="box"></span><span><b>Power bank 10,000 mAh</b><small>40 units · HL-PB-2201 … 2240</small></span><span class="help">40 / 40</span></label><label class="chk"><input type="checkbox"><span class="box"></span><span><b>Head mount</b><small>20 units · HL-HM-0901 … 0920</small></span><span class="help">20 / 20</span></label><label class="chk"><input type="checkbox"><span class="box"></span><span><b>USB-C cable, 2 m</b><small>20 units · HL-CB-0501 … 0520</small></span><span class="help">20 / 20</span></label><label class="chk"><input type="checkbox"><span class="box"></span><span><b>Lexar multi-card reader</b><small>2 units · HL-RD-0031, 0032</small></span><span class="help">2 / 2</span></label><label class="chk"><input type="checkbox"><span class="box"></span><span><b>Charging / junction box</b><small>2 units · HL-JB-0007, 0008</small></span><span class="help">2 / 2</span></label></div>
-            <div class="f" style="margin-top:18px"><label>Anything missing or damaged? <small>· optional</small></label><div class="in area ph">Describe it and add photos — we'll sort it out before you go live</div></div>
-            <div class="f"><label>Unboxing photos <small>· at least one per box</small></label><div class="in ph">https://…</div><button class="addrow">+ Add another photo</button></div>
-            <p class="help" id="hwCount">0 of 7 lines checked</p>
-            <div class="pane-foot"><button class="btn small ghost" data-pane-go="dispatch">Back</button><button class="btn" id="confirmHw" disabled>Confirm custody of all items</button></div>
+            <div class="pane-h"><h2>Confirm receipt</h2><p>Open every box and count each line against the packing list. Enter what actually arrived — anything short or damaged is recorded here, and you are not liable for it.</p></div>
+            <div class="tbl hwt" id="recvTbl"></div>
+            <div class="dnote" id="recvNote"></div>
+            <div class="f" style="margin-top:18px"><label>Unboxing photos <small>· at least one per box; add a photo of anything damaged</small></label><div class="in ph">https://…</div><button class="addrow">+ Add another photo</button></div>
+            <div class="pane-foot"><button class="btn small ghost" data-pane-go="dispatch">Back</button><button class="btn" id="confirmHw">Confirm custody</button></div>
           </div>
 
           <div class="pane" data-pane="done">
-            <div class="pane-h"><h2>Custody confirmed</h2><p>You now hold 164 items for HL-MH-112. Both parties have been emailed the confirmation.</p></div>
+            <div class="pane-h"><h2>Custody confirmed</h2><p id="doneText">You now hold 164 items for HL-MH-112. Both parties have been emailed the confirmation.</p></div>
             <div class="stepline">
               <span class="pill p-ok"><i></i>Custody confirmed · 17 Sept 2026</span>
               <p>Everything from here happens in your dashboard: operators check devices out and in every day through the HumynOperator app, you see custody live, and we reconcile weekly. Your first training session with Humyn is on 18 Sept.</p>
@@ -1497,19 +1526,137 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     document.getElementById('simRow2').hidden = true;
   });
 
-  /* ---------- hardware handover ---------- */
+  /* ---------- hardware handover: allocation dispute + receipt reconciliation ---------- */
   var agreeHw = document.getElementById('agreeHw');
   agreeHw.addEventListener('change', function(){ agreeHw.closest('.agree').classList.toggle('on', agreeHw.checked); document.getElementById('signHw').disabled = !agreeHw.checked; });
-  document.getElementById('hwChecks').addEventListener('change', function(e){
-    var c = e.target.closest('.chk'); if (c) c.classList.toggle('on', e.target.checked);
-    var n = document.querySelectorAll('#hwChecks .chk.on').length, t = document.querySelectorAll('#hwChecks .chk').length;
-    document.getElementById('hwCount').textContent = n+' of '+t+' lines checked';
-    document.getElementById('confirmHw').disabled = n < t;
+
+  function fmtIN(n){ n = Math.round(n); var neg = n < 0; n = Math.abs(n); var s = String(n); if (s.length > 3) { var last = s.slice(-3), rest = s.slice(0, -3); s = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + last; } return (neg ? '−' : '') + '₹' + s; }
+  var ALLOC = [
+    { item:'GoPro Hero 13 camera', ids:'HL-CAM-1301 … 1320', qty:20, unit:31300 },
+    { item:'Lexar 256 GB SD card', ids:'HL-SD-4011 … 4070', qty:60, unit:5015 },
+    { item:'Power bank 10,000 mAh', ids:'HL-PB-2201 … 2240', qty:40, unit:1595 },
+    { item:'Head mount', ids:'HL-HM-0901 … 0920', qty:20, unit:283 },
+    { item:'USB-C cable, 2 m', ids:'HL-CB-0501 … 0520', qty:20, unit:118 },
+    { item:'Lexar multi-card reader', ids:'HL-RD-0031, 0032', qty:2, unit:1652 },
+    { item:'Charging / junction box', ids:'HL-JB-0007, 0008', qty:2, unit:3000 }
+  ];
+  var REASONS = ['Too many for our workers', 'Too few for our workers', 'Unit value seems too high', 'We do not need this item', 'Something else'];
+  var disp = { mode:false, sent:false, resolved:false, rows:{} };   // rows[i] = {qty, unit, reason, note}
+  var allocTotal = function(){ return ALLOC.reduce(function(t, r){ return t + r.qty * r.unit; }, 0); };
+  var allocItems = function(){ return ALLOC.reduce(function(t, r){ return t + r.qty; }, 0); };
+  function propTotal(){ return ALLOC.reduce(function(t, r, i){ var d = disp.rows[i]; return t + (d && d.qty != null ? d.qty : r.qty) * (d && d.unit != null ? d.unit : r.unit); }, 0); }
+  function changedRows(){ return Object.keys(disp.rows).filter(function(i){ var d = disp.rows[i], r = ALLOC[i]; return (d.qty != null && d.qty !== r.qty) || (d.unit != null && d.unit !== r.unit); }); }
+
+  function renderAlloc(){
+    var editing = disp.mode && !disp.sent;
+    var h = '<table><tr><th>Item</th><th>Asset IDs</th><th class="num">Qty</th><th class="num">Unit value</th><th class="num">Total value</th>' + (disp.mode ? '<th>' + (disp.sent ? 'Status' : 'Your reason') + '</th>' : '') + '</tr>';
+    ALLOC.forEach(function(r, i){
+      var d = disp.rows[i] || {}; var q = d.qty != null ? d.qty : r.qty, u = d.unit != null ? d.unit : r.unit;
+      var qc = q !== r.qty, uc = u !== r.unit, tc = qc || uc;
+      h += '<tr><td>' + r.item + '</td><td class="ui">' + r.ids + '</td>';
+      if (editing) {
+        h += '<td class="num"><input class="numin' + (qc ? ' chg' : '') + '" type="text" inputmode="numeric" data-i="' + i + '" data-k="qty" value="' + q + '">' + (qc ? '<span class="was">' + r.qty + '</span>' : '') + '</td>';
+        h += '<td class="num"><input class="numin' + (uc ? ' chg' : '') + '" type="text" inputmode="numeric" data-i="' + i + '" data-k="unit" value="' + u + '" style="width:92px">' + (uc ? '<span class="was">' + fmtIN(r.unit) + '</span>' : '') + '</td>';
+        h += '<td class="num' + (tc ? ' chg' : '') + '">' + fmtIN(q * u) + (tc ? '<span class="was">' + fmtIN(r.qty * r.unit) + '</span>' : '') + '</td>';
+        h += '<td>' + (tc ? '<select class="sel' + (d.reason ? '' : ' miss') + '" data-i="' + i + '"><option value="">Why?</option>' + REASONS.map(function(x){ return '<option' + (d.reason === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>' + (d.reason === 'Something else' ? '<input class="notein" data-i="' + i + '" placeholder="One line is enough" value="' + (d.note || '') + '">' : '') : '<span class="help">—</span>') + '</td>';
+      } else {
+        h += '<td class="num' + (qc ? ' chg' : '') + '">' + q + (qc ? '<span class="was">' + r.qty + '</span>' : '') + '</td>';
+        h += '<td class="num' + (uc ? ' chg' : '') + '">' + fmtIN(u) + (uc ? '<span class="was">' + fmtIN(r.unit) + '</span>' : '') + '</td>';
+        h += '<td class="num' + (tc ? ' chg' : '') + '">' + fmtIN(q * u) + (tc ? '<span class="was">' + fmtIN(r.qty * r.unit) + '</span>' : '') + '</td>';
+        if (disp.mode) h += '<td>' + (tc ? (disp.resolved ? '<span class="pill p-ok"><i></i>Updated</span>' : '<span class="pill p-wait"><i></i>Disputed</span><small class="help" style="display:block;margin-top:4px">' + (d.reason || '') + '</small>') : '') + '</td>';
+      }
+      h += '</tr>';
+    });
+    var cur = allocTotal(), prop = propTotal(), diff = prop - cur;
+    h += '<tr class="tot"><td colspan="4"><b>Total in your custody</b></td><td class="num' + (diff ? ' chg' : '') + '"><b>' + fmtIN(prop) + '</b>' + (diff ? '<span class="was">' + fmtIN(cur) + '</span><span class="delta">' + (diff > 0 ? '+' : '') + fmtIN(diff) + '</span>' : '') + '</td>' + (disp.mode ? '<td></td>' : '') + '</tr></table>';
+    document.getElementById('allocTbl').innerHTML = h;
+    // bar + buttons
+    var bar = document.getElementById('dbar'), note = document.getElementById('dnote'), btn = document.getElementById('disputeBtn'), next = document.getElementById('allocNext');
+    var ch = changedRows(), ready = ch.length > 0 && ch.every(function(i){ return disp.rows[i].reason; });
+    bar.hidden = !editing;
+    if (editing) {
+      document.getElementById('dbarText').textContent = ch.length ? ch.length + ' line' + (ch.length > 1 ? 's' : '') + ' changed · new total ' + fmtIN(prop) + (diff ? ' (' + (diff > 0 ? '+' : '') + fmtIN(diff) + ')' : '') : 'No lines changed yet';
+      document.getElementById('dbarSub').textContent = ch.length ? (ready ? 'Humyn replies within one working day. The custody schedule waits until this is settled.' : 'Pick a reason for each changed line to send.') : 'Change a quantity or unit value in the table, then tell us why.';
+      document.getElementById('disputeSend').disabled = !ready;
+    }
+    btn.hidden = disp.mode;
+    next.disabled = editing || (disp.sent && !disp.resolved);
+    note.hidden = !disp.sent;
+    if (disp.sent && !disp.resolved) note.innerHTML = '<span class="pill p-wait"><i></i>Dispute sent</span><div><p><b>' + ch.length + ' line' + (ch.length > 1 ? 's' : '') + ' with Humyn.</b> We reply within one working day — you get an email and it shows here. Nothing to sign until then.</p><div class="sim">Demo control <button class="btn small ghost" id="simDispute">Simulate Humyn\'s reply</button></div></div>';
+    if (disp.resolved) note.innerHTML = '<span class="pill p-ok"><i></i>Settled</span><div><p><b>Humyn accepted your changes.</b> The allocation and the custody schedule below now show the agreed quantities and values. Total in your custody: <b>' + fmtIN(allocTotal()) + '</b>.</p></div>';
+    // custody schedule mirrors the table
+    document.querySelectorAll('[data-hw="total"]').forEach(function(el){ el.textContent = fmtIN(allocTotal()); });
+    document.querySelectorAll('[data-hw="sets"]').forEach(function(el){ el.textContent = ALLOC[0].qty; });
+  }
+  document.getElementById('disputeBtn').addEventListener('click', function(){ disp.mode = true; renderAlloc(); var f = document.querySelector('#allocTbl .numin'); if (f) f.focus(); });
+  document.getElementById('disputeCancel').addEventListener('click', function(){ disp = { mode:false, sent:false, resolved:false, rows:{} }; renderAlloc(); });
+  // live update while typing: touch only the cells that depend on this row, never the input itself
+  function updateAllocRow(i){
+    var r = ALLOC[i], d = disp.rows[i] || {}; var q = d.qty != null ? d.qty : r.qty, u = d.unit != null ? d.unit : r.unit;
+    var qc = q !== r.qty, uc = u !== r.unit, tc = qc || uc;
+    var row = document.querySelectorAll('#allocTbl table tr')[+i + 1]; if (!row) return; var td = row.children;
+    var qi = td[2].querySelector('.numin'), ui = td[3].querySelector('.numin');
+    qi.classList.toggle('chg', qc); ui.classList.toggle('chg', uc);
+    var setWas = function(cell, on, text){ var w = cell.querySelector('.was'); if (on) { if (!w) { w = document.createElement('span'); w.className = 'was'; cell.appendChild(w); } w.textContent = text; } else if (w) w.remove(); };
+    setWas(td[2], qc, r.qty); setWas(td[3], uc, fmtIN(r.unit));
+    td[4].className = 'num' + (tc ? ' chg' : ''); td[4].innerHTML = fmtIN(q * u) + (tc ? '<span class="was">' + fmtIN(r.qty * r.unit) + '</span>' : '');
+    if (tc && !td[5].querySelector('.sel')) td[5].innerHTML = '<select class="sel miss" data-i="' + i + '"><option value="">Why?</option>' + REASONS.map(function(x){ return '<option>' + x + '</option>'; }).join('') + '</select>';
+    if (!tc) { td[5].innerHTML = '<span class="help">—</span>'; delete d.reason; }
+    var cur = allocTotal(), prop = propTotal(), diff = prop - cur; var tot = document.querySelector('#allocTbl tr.tot td.num');
+    tot.className = 'num' + (diff ? ' chg' : ''); tot.innerHTML = '<b>' + fmtIN(prop) + '</b>' + (diff ? '<span class="was">' + fmtIN(cur) + '</span><span class="delta">' + (diff > 0 ? '+' : '') + fmtIN(diff) + '</span>' : '');
+    var ch = changedRows(), ready = ch.length > 0 && ch.every(function(k){ return disp.rows[k].reason; });
+    document.getElementById('dbarText').textContent = ch.length ? ch.length + ' line' + (ch.length > 1 ? 's' : '') + ' changed · new total ' + fmtIN(prop) + (diff ? ' (' + (diff > 0 ? '+' : '') + fmtIN(diff) + ')' : '') : 'No lines changed yet';
+    document.getElementById('dbarSub').textContent = ch.length ? (ready ? 'Humyn replies within one working day. The custody schedule waits until this is settled.' : 'Pick a reason for each changed line to send.') : 'Change a quantity or unit value in the table, then tell us why.';
+    document.getElementById('disputeSend').disabled = !ready;
+  }
+  document.getElementById('allocTbl').addEventListener('input', function(e){
+    var el = e.target; var i = el.dataset.i; if (i == null) return; disp.rows[i] = disp.rows[i] || {};
+    if (el.classList.contains('numin')) { disp.rows[i][el.dataset.k] = Math.max(0, parseInt((el.value || '0').replace(/\D/g, '') || '0', 10)); updateAllocRow(i); }
+    else if (el.classList.contains('notein')) { disp.rows[i].note = el.value; }
+  });
+  document.getElementById('allocTbl').addEventListener('change', function(e){ var el = e.target; if (!el.classList.contains('sel')) return; var i = el.dataset.i; disp.rows[i] = disp.rows[i] || {}; disp.rows[i].reason = el.value; renderAlloc(); var n = document.querySelector('#allocTbl .notein[data-i="' + i + '"]'); if (n) n.focus(); });
+  document.getElementById('disputeSend').addEventListener('click', function(){ disp.sent = true; renderAlloc(); });
+  document.addEventListener('click', function(e){
+    if (!e.target.closest('#simDispute')) return;
+    changedRows().forEach(function(i){ var d = disp.rows[i]; if (d.qty != null) ALLOC[i].qty = d.qty; if (d.unit != null) ALLOC[i].unit = d.unit; });
+    disp.resolved = true; renderAlloc(); renderRecv();
+  });
+
+  /* receipt reconciliation */
+  var recv = {};   // i -> {got, dmg}
+  function renderRecv(){
+    var h = '<table><tr><th>Item</th><th>Asset IDs</th><th class="num">Sent</th><th class="num">Received</th><th class="num">Damaged</th><th>Result</th></tr>';
+    var okAll = true, missing = 0, damaged = 0, missVal = 0, dmgVal = 0;
+    ALLOC.forEach(function(r, i){
+      var v = recv[i] || { got: r.qty, dmg: 0 }; var short = r.qty - v.got; var bad = short > 0 || v.dmg > 0;
+      if (bad) okAll = false; missing += Math.max(0, short); damaged += v.dmg; missVal += Math.max(0, short) * r.unit; dmgVal += v.dmg * r.unit;
+      var res = short > 0 && v.dmg > 0 ? short + ' missing · ' + v.dmg + ' damaged' : short > 0 ? short + ' missing' : v.dmg > 0 ? v.dmg + ' damaged' : short < 0 ? (-short) + ' extra' : 'All received';
+      h += '<tr><td>' + r.item + '</td><td class="ui">' + r.ids + '</td><td class="num">' + r.qty + '</td>'
+        + '<td class="num"><input class="numin' + (short > 0 ? ' bad' : '') + '" type="text" inputmode="numeric" data-i="' + i + '" data-k="got" value="' + v.got + '"></td>'
+        + '<td class="num"><input class="numin' + (v.dmg > 0 ? ' bad' : '') + '" type="text" inputmode="numeric" data-i="' + i + '" data-k="dmg" value="' + v.dmg + '"></td>'
+        + '<td><span class="' + (bad || short < 0 ? 'issue' : 'ok') + '">' + res + '</span></td></tr>';
+    });
+    var held = ALLOC.reduce(function(t, r, i){ var v = recv[i] || { got: r.qty, dmg: 0 }; return t + Math.min(v.got, r.qty) - v.dmg; }, 0);
+    var heldVal = ALLOC.reduce(function(t, r, i){ var v = recv[i] || { got: r.qty, dmg: 0 }; return t + (Math.min(v.got, r.qty) - v.dmg) * r.unit; }, 0);
+    h += '<tr class="tot"><td colspan="2"><b>In your custody</b></td><td class="num">' + allocItems() + '</td><td class="num"><b>' + held + '</b></td><td class="num">' + (damaged || '—') + '</td><td><b>' + fmtIN(heldVal) + '</b></td></tr></table>';
+    document.getElementById('recvTbl').innerHTML = h;
+    var note = document.getElementById('recvNote');
+    if (okAll) note.innerHTML = '<span class="pill p-ok"><i></i>Everything arrived</span><div><p><b>' + allocItems() + ' items, ' + fmtIN(allocTotal()) + '.</b> Confirming puts all of it in your custody under the schedule you signed.</p></div>';
+    else note.innerHTML = '<span class="pill p-bad"><i></i>Short or damaged</span><div><p><b>' + (missing ? missing + ' missing (' + fmtIN(missVal) + ')' : '') + (missing && damaged ? ' · ' : '') + (damaged ? damaged + ' damaged (' + fmtIN(dmgVal) + ')' : '') + '.</b> These are logged as a receipt dispute the moment you confirm: they stay out of your custody and your liability, Humyn replaces or credits them, and the courier claim is ours. Add a photo of any damaged item below.</p></div>';
+    document.getElementById('confirmHw').textContent = okAll ? 'Confirm custody of all ' + allocItems() + ' items' : 'Confirm custody of ' + held + ' items and report ' + (missing + damaged) + ' issue' + (missing + damaged > 1 ? 's' : '');
+    document.getElementById('doneText').textContent = 'You now hold ' + held + ' items (' + fmtIN(heldVal) + ') for HL-MH-112.' + (okAll ? '' : ' ' + (missing + damaged) + ' short or damaged item' + (missing + damaged > 1 ? 's are' : ' is') + ' under a receipt dispute — not in your custody.') + ' Both parties have been emailed the confirmation.';
+  }
+  document.getElementById('recvTbl').addEventListener('input', function(e){
+    var el = e.target; if (!el.classList.contains('numin')) return; var i = el.dataset.i, k = el.dataset.k;
+    recv[i] = recv[i] || { got: ALLOC[i].qty, dmg: 0 }; recv[i][k] = Math.max(0, parseInt((el.value || '0').replace(/\D/g, '') || '0', 10));
+    var active = document.activeElement; renderRecv();
+    var again = document.querySelector('#recvTbl .numin[data-i="' + i + '"][data-k="' + k + '"]'); if (again && active) { var v = el.value; again.value = v; again.focus(); try { again.setSelectionRange(v.length, v.length); } catch(x){} }
   });
   document.getElementById('confirmHw').addEventListener('click', function(){
     var w = document.getElementById('wiz-hw'); paneGo(w, 'done', true);
     document.querySelectorAll('#trk15 .tk').forEach(function(t,k){ t.classList.remove('done','now'); if (k<6) t.classList.add('done'); if (k===6) t.classList.add('now'); });
   });
+  renderAlloc(); renderRecv();
 
   /* ---------- selectable cards ---------- */
   var cards = document.getElementById('whatcards');

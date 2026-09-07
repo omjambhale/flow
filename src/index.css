@@ -317,3 +317,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .faq details[open] summary::after { content: '–'; }
 .faq p { margin: 8px 0 0; font-size: 14px; color: var(--char); }
 @media (max-width: 860px) { .help-grid { grid-template-columns: 1fr; } .past .row .end { width: auto; } }
+.tbl tr.click { cursor: pointer; }
+.tbl tr.click:hover td { background: var(--paper); }
+.tbl td.arrow { color: var(--line); width: 20px; text-align: right; }
+.tbl tr.click:hover td.arrow { color: var(--ink); }
