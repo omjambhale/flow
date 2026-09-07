@@ -33,6 +33,8 @@ export function Help() {
           <Card title="How you get paid" className="mb">
             <div className="rule"><b>Rate</b><span>{rates.map(r => fmtINR(r)).join(' / ')} per accepted hour, set per site in your agreement.</span></div>
             <div className="rule"><b>What counts</b><span>Only hours Humyn accepts after review. Uploading is not accepting.</span></div>
+            <div className="rule"><b>The 20-hour rule</b><span>A worker's hours on one task count up to 20. After that, the same worker on the same task adds nothing — move them to a task with room. Every site page shows task coverage and who is at the cap.</span></div>
+            <div className="rule"><b>Why</b><span>Humyn's customers need many different people doing many different tasks, not one person doing one task for weeks. Spread is worth more than volume.</span></div>
             <div className="rule"><b>Review time</b><span>Within two working days of upload. Every rejection carries a reason and a fix.</span></div>
             <div className="rule"><b>Invoices</b><span>Raised per site, per week, from accepted hours. You see the arithmetic on each invoice.</span></div>
             <div className="rule"><b>Payout</b><span>Scheduled invoices are paid on the next payout date. Bank reference shows on the invoice once paid.</span></div>

@@ -6,7 +6,7 @@ import { Payments, Invoice } from './pages/Payments'
 import { Sites, SiteDetail, StepDetail, SiteHardware, SiteToday, SitePeople } from './pages/Sites'
 import { OperatorPage, WorkerPage, SupervisorPage } from './pages/People'
 import { RecordingPage } from './pages/Recording'
-import { Performance, Workers, ReasonList } from './pages/Performance'
+import { Performance, ReasonList } from './pages/Performance'
 import { Hardware } from './pages/Hardware'
 import { Profile } from './pages/Profile'
 import { Help } from './pages/Help'
@@ -98,8 +98,7 @@ function Crumbs() {
       if (wk && op) parts.push({ to: `/sites/${r.siteId}/operator/${op.id}/worker/${wk.id}`, label: wk.name })
     }
     parts.push({ label: m.id })
-  } else if (path === '/performance/workers') parts.push({ to: '/performance', label: 'Performance' }, { label: 'Workers' })
-  else if ((m = match('/performance/reason/:i', path))) parts.push({ to: '/performance', label: 'Performance' }, { label: 'Needs work' })
+  } else if ((m = match('/performance/reason/:i', path))) parts.push({ to: '/performance', label: 'Performance' }, { label: 'Needs work' })
   else if ((m = match('/hardware/:id', path))) parts.push({ to: '/hardware', label: 'Hardware' }, { label: site(m.id)?.name ?? m.id })
   else if (path === '/profile') parts.push({ to: '/sites', label: data.partner.org }, { label: 'Your profile' })
   if (parts.length < 2) return <div className="crumbs" />
@@ -134,7 +133,6 @@ function Routes() {
   if (path === '/hardware') return <Hardware />
   if ((m = match('/hardware/:id', path))) return <SiteHardware id={m.id} />
   if (path === '/performance') return <Performance />
-  if (path === '/performance/workers') return <Workers />
   if ((m = match('/performance/reason/:i', path))) return <ReasonList index={Number(m.i)} />
   if (path === '/profile') return <Profile />
   if (path === '/help') return <Help />

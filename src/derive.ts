@@ -200,3 +200,36 @@ export const assetValue = (list: { value: number }[]) => list.reduce((s, a) => s
 
 /** short site name for chart labels: "Sri Ganesh", "Shakti" */
 export const shortName = (name: string) => { const w = name.split(' '); return w[0].length <= 4 && w[1] ? `${w[0]} ${w[1]}` : w[0] }
+
+/* ----- task coverage and the 20-hour rule ----- */
+export const CAP_HOURS = 20
+
+/** per worker × task accepted hours; over = hours beyond the cap that will not count */
+export const workerTaskHours = (d: Dataset, recs: Recording[]) => {
+  const m = new Map<string, { workerId: string; taskId: string; stepId: string; siteId: string; hours: number }>()
+  for (const r of recs) {
+    if (!isGood(r)) continue
+    const k = `${r.workerId}|${r.taskId}`
+    const e = m.get(k) ?? { workerId: r.workerId, taskId: r.taskId, stepId: r.stepId, siteId: r.siteId, hours: 0 }
+    e.hours += r.minutes / 60
+    m.set(k, e)
+  }
+  return [...m.values()].map(e => ({ ...e, hours: Math.round(e.hours * 10) / 10, over: Math.max(0, Math.round((e.hours - CAP_HOURS) * 10) / 10), room: Math.max(0, Math.round((CAP_HOURS - e.hours) * 10) / 10) }))
+}
+
+/** for one site: every task with hours, share of site hours, workers recorded, and cap status */
+export const taskCoverage = (d: Dataset, site: Site) => {
+  const recs = siteRecordings(d, site.id)
+  const wt = workerTaskHours(d, recs)
+  const total = wt.reduce((s, x) => s + x.hours, 0)
+  return site.process.steps.flatMap(st => st.tasks.map(t => {
+    const rows = wt.filter(x => x.taskId === t.id)
+    const hours = Math.round(rows.reduce((s, x) => s + x.hours, 0) * 10) / 10
+    return {
+      step: st, task: t, hours, share: total ? Math.round(hours / total * 100) : 0,
+      workers: rows.length, expectedWorkers: t.workers, expected: t.workers * t.hoursPerWorker,
+      overCap: rows.filter(x => x.over > 0).length, overHours: Math.round(rows.reduce((s, x) => s + x.over, 0) * 10) / 10,
+      underCap: rows.filter(x => x.room > 0).length, room: Math.round(rows.reduce((s, x) => s + x.room, 0) * 10) / 10,
+    }
+  }))
+}

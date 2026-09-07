@@ -5,7 +5,7 @@ import { HBars } from '../components/charts'
 import type { Site, Step } from '../types'
 import {
   assetValue, assetsAtRisk, byReason, cameraOutput, fmtDate, fmtHours, fmtINR, healthLabel, hrs, isGood, pct, siteHealth, siteRecordings,
-  siteTarget, stageLabel, statusLabel, stepExpected, summarise, thisWeek, titleOf, workerStats,
+  siteTarget, stageLabel, statusLabel, stepExpected, summarise, thisWeek, titleOf, workerStats, taskCoverage, workerTaskHours, CAP_HOURS,
 } from '../derive'
 
 const stepDone = (recs: ReturnType<typeof siteRecordings>, step: Step) => hrs(recs.filter(r => r.stepId === step.id && isGood(r)).reduce((s, r) => s + r.minutes, 0))
@@ -147,6 +147,7 @@ export function SiteDetail({ id }: { id: string }) {
   const sups = data.people.filter(p => p.siteId === site.id && p.role === 'supervisor' && p.active)
   const bad = recs.filter(r => r.status === 'rejected').sort((a, b) => b.date.localeCompare(a.date))
   const reasons = byReason(thisWeek(recs))
+  const coverage = taskCoverage(data, site).sort((a, b) => b.overCap - a.overCap || b.hours - a.hours)
   if (site.stage === 'closed') {
     return (
       <>
@@ -183,8 +184,8 @@ export function SiteDetail({ id }: { id: string }) {
       <div className="kpis">
         <Kpi label="Progress" value={`${pct(all.acceptedHours, target)}%`} sub={`${fmtHours(all.acceptedHours)} of ${fmtHours(target)}`} />
         <Kpi label="Acceptance" value={`${week.acceptance}%`} tone={accTone(week.acceptance)} sub="this week" />
-        <Kpi label="Present" value={`${site.presentToday}/${site.scheduledToday}`} tone={presTone(site.presentToday, site.scheduledToday)} to={`/sites/${site.id}/today`} />
-        <Kpi label="Cameras" value={`${camsOn}/${cams.length}`} tone={camsOn < cams.length ? 'amber' : undefined} to={`/sites/${site.id}/hardware`} />
+        <Kpi label="Workers" value={`${site.presentToday}/${site.scheduledToday}`} sub="on the floor today" tone={presTone(site.presentToday, site.scheduledToday)} to={`/sites/${site.id}/today`} />
+        <Kpi label="Items" value={hw.length} sub={`${camsOn}/${cams.length} cameras recording`} subTone={camsOn < cams.length ? 'amber' : undefined} to={`/sites/${site.id}/hardware`} />
         <Kpi label="Upload" value={lagText(site.uploadLagMin)} tone={lagTone(site.uploadLagMin)} to={`/sites/${site.id}/today`} />
         <Kpi label="Hardware" value={fmtINR(assetValue(hw))} sub={risk.length ? `${fmtINR(assetValue(risk))} at risk` : `${hw.length} items`} subTone={risk.length ? 'red' : undefined} to={`/sites/${site.id}/hardware`} />
       </div>
@@ -206,32 +207,47 @@ export function SiteDetail({ id }: { id: string }) {
         </div>
       </Card>
 
+      <Card title="Task coverage" className="mb">
+        <div className="tbl-wrap"><table className="tbl">
+          <thead><tr><th>Task</th><th>Step</th><th className="num">Hours</th><th className="num">Share</th><th className="num">Workers</th><th className="num">Over cap</th><th className="num">Room left</th><th></th></tr></thead>
+          <tbody>{coverage.map(c => (
+            <tr key={c.task.id} className="click" onClick={() => go(`/sites/${site.id}/step/${c.step.id}`)}>
+              <td><Link to={`/sites/${site.id}/step/${c.step.id}`}>{c.task.name}</Link></td>
+              <td className="small muted">{c.step.order}. {c.step.name}</td>
+              <td className="num">{fmtHours(c.hours)}</td>
+              <td className="num"><div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}><span className="bar thin" style={{ width: 60 }}><i style={{ width: `${Math.min(100, c.share * 3)}%` }} /></span>{c.share}%</div></td>
+              <td className={`num ${c.workers < c.expectedWorkers ? 'amber' : ''}`}>{c.workers}<span className="muted"> / {c.expectedWorkers}</span></td>
+              <td className={`num ${c.overCap ? 'red' : ''}`}>{c.overCap ? `${c.overCap} · ${fmtHours(c.overHours)} not counted` : '—'}</td>
+              <td className="num">{c.room ? fmtHours(c.room) : '—'}</td>
+              <td className="arrow">›</td>
+            </tr>
+          ))}</tbody>
+        </table></div>
+      </Card>
+
       <div className="cgrid">
         <div>
           <Card title={`Your team here · ${sups.length + ops.length}`} action={{ to: `/sites/${site.id}/people`, label: 'All people' }} className="mb">
             <div className="tbl-wrap"><table className="tbl">
-              <thead><tr><th>Person</th><th>Role</th><th className="num">Workers</th><th className="num">This week</th><th className="num">Accepted</th><th>Cameras</th><th></th></tr></thead>
+              <thead><tr><th>Person</th><th>Role</th><th className="num">Workers</th><th className="num">This week</th><th className="num">Accepted</th><th></th></tr></thead>
               <tbody>
                 {sups.map(p => (
-                  <tr key={p.id} className="click" onClick={() => go(`/sites/${site.id}/supervisor/${p.id}`)}>
-                    <td><Link to={`/sites/${site.id}/supervisor/${p.id}`}>{p.name}</Link></td><td className="small muted">Supervisor</td>
+                  <tr key={p.id} className="click" onClick={() => go(`/sites/${site.id}/people`)}>
+                    <td><Link to={`/sites/${site.id}/people`}>{p.name}</Link></td><td className="small muted">Supervisor</td>
                     <td className="num">{data.people.filter(w => w.role === 'worker' && w.active && w.siteId === site.id).length}</td>
                     <td className="num">{fmtHours(week.acceptedHours)}</td>
                     <td className={`num ${accTone(week.acceptance) ?? ''}`}>{week.acceptance}%</td>
-                    <td className="small muted">runs the site</td>
                     <td className="arrow">›</td>
                   </tr>
                 ))}
                 {ops.map(p => {
                   const s = summarise(thisWeek(recs.filter(r => r.operatorId === p.id)))
-                  const cam = cams.filter(c => c.holderId === p.id)
                   return (
-                    <tr key={p.id} className="click" onClick={() => go(`/sites/${site.id}/operator/${p.id}`)}>
-                      <td><Link to={`/sites/${site.id}/operator/${p.id}`}>{p.name}</Link></td><td className="small muted">Operator</td>
+                    <tr key={p.id} className="click" onClick={() => go(`/sites/${site.id}/people`)}>
+                      <td><Link to={`/sites/${site.id}/people`}>{p.name}</Link></td><td className="small muted">Operator</td>
                       <td className="num">{data.people.filter(w => w.reportsTo === p.id && w.active).length}</td>
                       <td className="num">{fmtHours(s.acceptedHours)}</td>
                       <td className={`num ${accTone(s.acceptance) ?? ''}`}>{s.acceptance}%</td>
-                      <td className="small">{cam.map(c => <span key={c.id} className={c.status === 'in-use' ? '' : 'amber'}>{c.id}{c.status !== 'in-use' ? ` (${c.status})` : ''} </span>)}</td>
                       <td className="arrow">›</td>
                     </tr>
                   )
@@ -252,20 +268,23 @@ export function SiteDetail({ id }: { id: string }) {
               {reasons.length === 0 ? <Empty title="Nothing rejected this week" /> : <HBars data={reasons.map(r => ({ label: r.reason, value: r.hours, hint: `${r.count} recordings` }))} format={v => fmtHours(v)} />}
             </div>
           </Card>
-          <Card title={`Workers who need help`} action={{ to: `/sites/${site.id}/people`, label: 'All workers' }}>
+          <Card title="Operators to talk to" action={{ to: `/sites/${site.id}/people`, label: 'All people' }}>
             <div className="tbl-wrap"><table className="tbl">
-              <thead><tr><th>Worker</th><th>Operator</th><th className="num">Accepted</th><th>Issue</th></tr></thead>
+              <thead><tr><th>Operator</th><th className="num">Rejected</th><th className="num">Accepted</th><th>Main issue</th><th></th></tr></thead>
               <tbody>
-                {[...workers].sort((a, b) => a.acceptance - b.acceptance).slice(0, 5).map(w => (
-                  <tr key={w.id} className="click" onClick={() => go(`/sites/${site.id}/operator/${w.operatorId}/worker/${w.id}`)}>
-                    <td><Link to={`/sites/${site.id}/operator/${w.operatorId}/worker/${w.id}`}>{w.name}</Link></td>
-                    <td className="small muted">{data.people.find(p => p.id === w.operatorId)?.name}</td>
-                    <td className={`num ${accTone(w.acceptance) ?? ''}`}>{w.acceptance}%</td>
-                    <td className="small muted">{w.mainIssue ?? '—'}</td>
+                {ops.map(p => { const rr = thisWeek(recs.filter(r => r.operatorId === p.id)); return { p, s: summarise(rr), issue: byReason(rr)[0]?.reason } })
+                  .sort((a, b) => b.s.rejectedHours - a.s.rejectedHours).map(({ p, s, issue }) => (
+                  <tr key={p.id} className="click" onClick={() => go(`/sites/${site.id}/operator/${p.id}`)}>
+                    <td><Link to={`/sites/${site.id}/operator/${p.id}`}>{p.name}</Link><div className="small muted">{data.people.filter(w => w.reportsTo === p.id && w.active).length} workers</div></td>
+                    <td className={`num ${s.rejectedHours > 0 ? 'red' : ''}`}>{fmtHours(s.rejectedHours)}</td>
+                    <td className={`num ${accTone(s.acceptance) ?? ''}`}>{s.acceptance}%</td>
+                    <td className="small muted">{issue ?? '—'}</td>
+                    <td className="arrow">›</td>
                   </tr>
                 ))}
               </tbody>
             </table></div>
+            <div className="small muted" style={{ padding: '10px 18px 14px' }}>This week. An operator's number is the sum of their workers' rejected hours — fix it with the operator, not the worker.</div>
           </Card>
         </div>
       </div>
@@ -287,6 +306,8 @@ export function StepDetail({ id, step: stepId }: { id: string; step: string }) {
   const idx = site.process.steps.findIndex(x => x.id === step.id)
   const prev = site.process.steps[idx - 1], next = site.process.steps[idx + 1]
   const workers = workerStats(data, recs).sort((a, b) => b.acceptedHours - a.acceptedHours)
+  const capRows = workerTaskHours(data, recs).sort((a, b) => b.hours - a.hours)
+  const { go } = useRoute()
   return (
     <>
       <PageH title={`Step ${step.order} of ${site.process.steps.length} · ${step.name}`} sub={`${site.process.name} · ${site.name}`}
@@ -315,17 +336,21 @@ export function StepDetail({ id, step: stepId }: { id: string; step: string }) {
             })}
           </div>
         </Card>
-        <Card title="Workers on this step">
+        <Card title={<>Workers on this step <span className="muted small">· {CAP_HOURS}h cap per task</span></>}>
           <div className="tbl-wrap"><table className="tbl">
-            <thead><tr><th>Worker</th><th className="num">Hours</th><th className="num">Accepted</th><th>Issue</th></tr></thead>
-            <tbody>{workers.map(w => (
-              <tr key={w.id}>
-                <td><Link to={`/sites/${site.id}/operator/${w.operatorId}/worker/${w.id}`}>{w.name}</Link></td>
-                <td className="num">{fmtHours(w.acceptedHours)}</td>
-                <td className={`num ${accTone(w.acceptance) ?? ''}`}>{w.acceptance}%</td>
-                <td className="muted small">{w.acceptance < 92 && w.mainIssue ? w.mainIssue : '—'}</td>
-              </tr>
-            ))}</tbody>
+            <thead><tr><th>Worker</th><th>Task</th><th className="num">Hours</th><th style={{ width: 140 }}>Towards cap</th><th>Status</th></tr></thead>
+            <tbody>{capRows.map(x => {
+              const w = data.people.find(p => p.id === x.workerId); const t = step.tasks.find(tt => tt.id === x.taskId)
+              return (
+                <tr key={`${x.workerId}-${x.taskId}`} className="click" onClick={() => go(`/sites/${site.id}/operator/${w?.reportsTo}/worker/${x.workerId}`)}>
+                  <td><Link to={`/sites/${site.id}/operator/${w?.reportsTo}/worker/${x.workerId}`}>{w?.name}</Link></td>
+                  <td className="small muted">{t?.name}</td>
+                  <td className="num">{fmtHours(x.hours)}</td>
+                  <td><Bar value={Math.min(x.hours, CAP_HOURS)} max={CAP_HOURS} tone={x.over > 0 ? 'red' : x.room < 4 ? 'amber' : 'green'} thin /></td>
+                  <td className={x.over > 0 ? 'red' : x.room < 4 ? 'amber' : 'green'}>{x.over > 0 ? `${fmtHours(x.over)} over · move to another task` : x.room < 4 ? `${fmtHours(x.room)} left` : `${fmtHours(x.room)} left`}</td>
+                </tr>
+              )
+            })}</tbody>
           </table></div>
         </Card>
       </div>
@@ -356,6 +381,7 @@ export function RecRow({ id, hideSite }: { id: string; hideSite?: boolean }) {
 
 export function SitePeople({ id }: { id: string }) {
   const { data } = useApp()
+  const { go } = useRoute()
   const site = data.sites.find(s => s.id === id)
   if (!site) return <Empty title="Site not found" />
   const recs = siteRecordings(data, id)
@@ -377,13 +403,14 @@ export function SitePeople({ id }: { id: string }) {
         </Card>
         <Card title={`Workers · ${workers.length}`}>
           <div className="tbl-wrap"><table className="tbl">
-            <thead><tr><th>Worker</th><th>Operator</th><th className="num">Hours</th><th className="num">Accepted</th></tr></thead>
+            <thead><tr><th>Worker</th><th>Operator</th><th className="num">Hours</th><th className="num">Accepted</th><th></th></tr></thead>
             <tbody>{workers.map(w => (
-              <tr key={w.id}>
+              <tr key={w.id} className="click" onClick={() => go(`/sites/${id}/operator/${w.operatorId}/worker/${w.id}`)}>
                 <td><Link to={`/sites/${id}/operator/${w.operatorId}/worker/${w.id}`}>{w.name}</Link></td>
-                <td className="small muted">{data.people.find(p => p.id === w.operatorId)?.name}</td>
+                <td className="small"><Link to={`/sites/${id}/operator/${w.operatorId}`} onClick={e => e.stopPropagation()}>{data.people.find(p => p.id === w.operatorId)?.name}</Link></td>
                 <td className="num">{fmtHours(w.acceptedHours)}</td>
                 <td className={`num ${accTone(w.acceptance) ?? ''}`}>{w.acceptance}%</td>
+                <td className="arrow">›</td>
               </tr>
             ))}</tbody>
           </table></div>
@@ -451,7 +478,7 @@ export function SiteToday({ id }: { id: string }) {
     <>
       <PageH title="Today" sub={site.name} />
       <div className="kpis k4">
-        <Kpi label="Present" value={`${site.presentToday}/${site.scheduledToday}`} sub={`${pct(site.presentToday, site.scheduledToday)}% attendance`} tone={presTone(site.presentToday, site.scheduledToday)} />
+        <Kpi label="Workers" value={`${site.presentToday}/${site.scheduledToday}`} sub={`${pct(site.presentToday, site.scheduledToday)}% attendance`} tone={presTone(site.presentToday, site.scheduledToday)} />
         <Kpi label="Cameras recording" value={`${cams.filter(c => c.status === 'in-use').length}/${cams.length}`} tone={cams.some(c => c.status !== 'in-use') ? 'amber' : undefined} />
         <Kpi label="Upload" value={lagText(site.uploadLagMin)} sub="since last sync" tone={lagTone(site.uploadLagMin)} />
         <Kpi label="Waiting to upload" value={stuck.length} sub={fmtHours(hrs(stuck.reduce((s, r) => s + r.minutes, 0)))} tone={stuck.length > 5 ? 'amber' : undefined} />

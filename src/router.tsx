@@ -30,15 +30,15 @@ export function Router({ children }: { children: ReactNode }) {
 
 export const useRoute = () => useContext(Ctx)
 
-export function Link({ to, className, children, onClick }: { to: string; className?: string; children: ReactNode; onClick?: () => void }) {
+export function Link({ to, className, children, onClick, title }: { to: string; className?: string; children: ReactNode; onClick?: (e: MouseEvent) => void; title?: string }) {
   const { go } = useRoute()
   const click = (e: MouseEvent) => {
     if (e.metaKey || e.ctrlKey) return
     e.preventDefault()
-    onClick?.()
+    onClick?.(e)
     go(to)
   }
-  return <a href={BASE + strip(to)} className={className} onClick={click}>{children}</a>
+  return <a href={BASE + strip(to)} className={className} title={title} onClick={click}>{children}</a>
 }
 
 /** match('/sites/:id/step/:step', path) → {id, step} | null */

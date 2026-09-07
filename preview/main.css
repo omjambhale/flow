@@ -1375,3 +1375,38 @@ table.tbl {
 .tbl tr.click:hover td.arrow {
   color: var(--ink);
 }
+.filters {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mute);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.filters .sel {
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--white);
+  font: inherit;
+  font-size: 14px;
+  padding: 0 10px;
+  color: var(--ink);
+  min-width: 150px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.filters .btn {
+  height: 38px;
+  padding: 0 14px;
+  font-size: 14px;
+}

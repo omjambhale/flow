@@ -235,6 +235,14 @@ const makeRecordings = (site: Site, weeks: number, perDay: number, rejectRate: n
 makeRecordings(sites[0], 5, 9, 0.11)
 makeRecordings(sites[1], 4, 6, 0.24, 3)
 
+// two workers who have been left on one task for weeks — the 20-hour rule in action
+for (const wid of [workers.HL014[0], workers.HL014[7]]) {
+  const mine = recordings.filter(r => r.workerId === wid)
+  const first = mine[0]
+  if (!first) continue
+  for (const r of mine) { r.stepId = first.stepId; r.taskId = first.taskId; r.minutes = Math.min(120, Math.round(r.minutes * 1.5)) }
+}
+
 /* ---------- invoices ---------- */
 
 const invoices: Invoice[] = []
