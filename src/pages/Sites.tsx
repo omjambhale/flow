@@ -184,7 +184,7 @@ export function SiteDetail({ id }: { id: string }) {
       <div className="kpis">
         <Kpi label="Progress" value={`${pct(all.acceptedHours, target)}%`} sub={`${fmtHours(all.acceptedHours)} of ${fmtHours(target)}`} />
         <Kpi label="Acceptance" value={`${week.acceptance}%`} tone={accTone(week.acceptance)} sub="this week" />
-        <Kpi label="Workers" value={`${site.presentToday}/${site.scheduledToday}`} sub="on the floor today" tone={presTone(site.presentToday, site.scheduledToday)} to={`/sites/${site.id}/today`} />
+        <Kpi label="Workers" value={`${site.presentToday}/${site.scheduledToday}`} sub="on site today" tone={presTone(site.presentToday, site.scheduledToday)} to={`/sites/${site.id}/today`} />
         <Kpi label="Hardware" value={hw.length} sub={`${camsOn}/${cams.length} cameras recording`} subTone={camsOn < cams.length ? 'amber' : undefined} to={`/sites/${site.id}/hardware`} />
         <Kpi label="Upload" value={lagText(site.uploadLagMin)} tone={lagTone(site.uploadLagMin)} to={`/sites/${site.id}/today`} />
         <Kpi label="Hardware value" value={fmtINR(assetValue(hw))} sub={risk.length ? `${fmtINR(assetValue(risk))} at risk` : `${hw.length} pieces`} subTone={risk.length ? 'red' : undefined} to={`/sites/${site.id}/hardware`} />

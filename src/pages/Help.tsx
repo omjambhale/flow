@@ -65,9 +65,9 @@ export function Help() {
 
           <Card title="Why recordings get rejected" className="mb">
             <div className="faq">
-              <details><summary>Camera — visible, steady, lit</summary><p>The hands and the work piece must stay in frame with enough light to see them. Tighten the head strap, tilt slightly down so the bench top sits mid-frame, and check the first minute on the phone before walking away.</p></details>
+              <details><summary>Camera — visible, steady, lit</summary><p>The hands and the work piece must stay in frame with enough light to see them. Tighten the head strap, tilt slightly down so the work surface sits mid-frame, and check the first minute on the phone before walking away.</p></details>
               <details><summary>Task — right step, right worker</summary><p>The step and worker chosen in the app must match the footage. Pick the step after the worker has started, and reassign the camera in the app when workers swap mid-shift.</p></details>
-              <details><summary>Coverage — full duration, no gaps</summary><p>Idle time is not validated. Pause when the line stops, resume when work restarts, and keep the power bank cable clipped so the clip does not end early.</p></details>
+              <details><summary>Coverage — full duration, no gaps</summary><p>Idle time is not validated. Pause when work stops, resume when it restarts, and keep the power bank cable clipped so the clip does not end early.</p></details>
               <details><summary>How much is an hour worth to us?</summary><p>Each rejected hour is the site rate you do not receive. The Performance tab shows the reasons costing you the most this week and the workers who need help.</p></details>
             </div>
           </Card>

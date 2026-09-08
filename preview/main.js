@@ -12854,6 +12854,29 @@
       step(5, "Pack", [["Fold and pack", 4]])
     ]
   };
+  var kitchen = {
+    id: "p-kitchen",
+    name: "Cloud kitchen \xB7 order to dispatch",
+    steps: [
+      step(1, "Receive", [["Receive and store ingredients", 3]]),
+      step(2, "Prep", [["Wash and chop vegetables", 6], ["Marinate", 4]]),
+      step(3, "Cook", [["Cook on the range", 8], ["Fry", 4]]),
+      step(4, "Pack", [["Portion and pack orders", 6], ["Seal and label", 4]]),
+      step(5, "Dispatch", [["Hand over to riders", 3]]),
+      step(6, "Wash", [["Dishwashing", 4], ["Clean the station", 4]])
+    ]
+  };
+  var fulfilment = {
+    id: "p-fulfilment",
+    name: "Fulfilment \xB7 receive to dispatch",
+    steps: [
+      step(1, "Receive", [["Unload and scan", 4]]),
+      step(2, "Putaway", [["Shelve by location", 5]]),
+      step(3, "Pick", [["Pick to tote", 10]]),
+      step(4, "Pack", [["Pack and label", 8]]),
+      step(5, "Dispatch", [["Sort by route", 4], ["Load vans", 4]])
+    ]
+  };
   var sites = [
     {
       id: "HL014",
@@ -12871,13 +12894,13 @@
     },
     {
       id: "HL021",
-      name: "Sri Ganesh Garments",
+      name: "Annapoorna Cloud Kitchen",
       city: "Coimbatore",
       state: "Tamil Nadu",
-      type: "Textile and garments",
+      type: "Cloud kitchen",
       stage: "live",
       ratePerHour: 390,
-      process: textile,
+      process: kitchen,
       uploadLagMin: 4380,
       scheduledToday: 40,
       presentToday: 22,
@@ -12899,13 +12922,13 @@
     },
     {
       id: "HL031",
-      name: "Kaveri Castings",
+      name: "Fresh Basket Fulfilment Centre",
       city: "Belagavi",
       state: "Karnataka",
-      type: "Foundry and machining",
+      type: "E-commerce fulfilment centre",
       stage: "recce",
       ratePerHour: 418,
-      process: foundry,
+      process: fulfilment,
       uploadLagMin: 0,
       scheduledToday: 0,
       presentToday: 0,
@@ -13045,11 +13068,11 @@
   }
   var reasons = [
     { camera: [35, 60], task: [70, 95], coverage: [70, 95], reason: "Camera pointed at the ceiling for most of the clip", feedback: "The head mount slipped upwards about four minutes in. For the remaining 30 minutes the frame shows the roof trusses and lights, not the hands or the work piece.", fix: "Tighten the head strap and ask the worker to look at the work piece when recording starts. Check the first minute on the phone before walking away." },
-    { camera: [40, 65], task: [70, 95], coverage: [70, 95], reason: "Too dark to see the hands", feedback: "Lighting near the furnace mouth is very low and the camera exposure did not compensate. Hands and tool are visible only as silhouettes.", fix: "Record this step from the side where the shop light falls on the work, or ask the supervisor to switch on the bay light." },
-    { camera: [45, 70], task: [70, 95], coverage: [65, 90], reason: "Hands out of frame", feedback: "The worker's hands leave the frame every time the part is placed on the bench. Roughly half of the clip has no hands visible.", fix: "Mount the camera slightly lower and tilt it down so the bench top is at the centre of the frame." },
-    { camera: [70, 95], task: [30, 55], coverage: [70, 95], reason: "Wrong step selected on the app", feedback: 'The clip is labelled "Fettle \xB7 Grind flash" but the footage shows CNC loading. The recording is good; only the label is wrong.', fix: "Choose the step in the app after the worker has started, and confirm the step name on the screen before pressing record." },
+    { camera: [40, 65], task: [70, 95], coverage: [70, 95], reason: "Too dark to see the hands", feedback: "Lighting at this work area is very low and the camera exposure did not compensate. Hands and tools are visible only as silhouettes.", fix: "Record this step from the side where the light falls on the work, or ask the supervisor to switch on the lights over that area." },
+    { camera: [45, 70], task: [70, 95], coverage: [65, 90], reason: "Hands out of frame", feedback: "The worker's hands leave the frame every time the item is put down. Roughly half of the clip has no hands visible.", fix: "Mount the camera slightly lower and tilt it down so the work surface is at the centre of the frame." },
+    { camera: [70, 95], task: [30, 55], coverage: [70, 95], reason: "Wrong step selected on the app", feedback: "The step chosen in the app does not match the work in the footage. The recording is good; only the label is wrong.", fix: "Choose the step in the app after the worker has started, and confirm the step name on the screen before pressing record." },
     { camera: [70, 95], task: [35, 60], coverage: [70, 95], reason: "Different worker than the one selected", feedback: "The app shows worker Nagaraj but the person in the clip is not the one registered for this camera today.", fix: "Reassign the camera in the app when a worker swaps during the shift." },
-    { camera: [70, 95], task: [70, 95], coverage: [30, 55], reason: "Long idle stretch, no work happening", feedback: "22 of 48 minutes show the worker waiting for parts. Idle time cannot be validated.", fix: "Pause the recording when the line stops and resume when work restarts." },
+    { camera: [70, 95], task: [70, 95], coverage: [30, 55], reason: "Long idle stretch, no work happening", feedback: "22 of 48 minutes show the worker waiting, with no work happening. Idle time cannot be validated.", fix: "Pause the recording when work stops and resume when it restarts." },
     { camera: [70, 95], task: [70, 95], coverage: [35, 60], reason: "Recording stopped half way", feedback: "The clip ends abruptly at 14 minutes; the power bank was disconnected.", fix: "Check the power bank cable is clipped to the belt before the shift starts." }
   ];
   var workerSteps = /* @__PURE__ */ new Map();
@@ -13141,8 +13164,8 @@
   buildInvoice(sites[1], "HL021-2608", "August 2026", day(35), day(14), "paid", { submittedOn: day(13), reviewStartedOn: day(12), expectedPaymentOn: day(6), paidOn: day(5), reference: "UTR 6321\u2026911" });
   buildInvoice(sites[1], "HL021-2609A", "1\u20135 September", day(13), day(2), "review", { submittedOn: day(1), reviewStartedOn: day(0), expectedPaymentOn: day(-8), query: { amount: 6270, owner: "Partner Success", status: "Waiting for Humyn", dueInDays: 2 } });
   var notices = [
-    { id: "N1", kind: "ops", text: "Sri Ganesh Garments has not uploaded for 3 days", siteId: "HL021", href: "/sites/HL021/today", minutesAgo: 40, resolved: false },
-    { id: "N2", kind: "hardware", text: "Power bank PB-051 marked missing at Sri Ganesh Garments", siteId: "HL021", href: "/sites/HL021/hardware", minutesAgo: 180, resolved: false },
+    { id: "N1", kind: "ops", text: "Annapoorna Cloud Kitchen has not uploaded for 3 days", siteId: "HL021", href: "/sites/HL021/today", minutesAgo: 40, resolved: false },
+    { id: "N2", kind: "hardware", text: "Power bank PB-051 marked missing at Annapoorna Cloud Kitchen", siteId: "HL021", href: "/sites/HL021/hardware", minutesAgo: 180, resolved: false },
     { id: "N3", kind: "quality", text: "4 recordings need work at Shakti Precision Works this week", siteId: "HL014", href: "/performance", minutesAgo: 600, resolved: false },
     { id: "N4", kind: "payment", text: "Invoice HL014-2609A scheduled for payment", siteId: "HL014", href: "/payments/HL014-2609A", minutesAgo: 1500, resolved: true },
     { id: "N5", kind: "hardware", text: "Hardware for Anand Auto Components dispatched (Delhivery DLV-8834-2201)", siteId: "HL027", href: "/sites/HL027/hardware", minutesAgo: 2900, resolved: true }
@@ -13915,7 +13938,7 @@
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "kpis", children: [
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Progress", value: `${pct(all.acceptedHours, target)}%`, sub: `${fmtHours(all.acceptedHours)} of ${fmtHours(target)}` }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Acceptance", value: `${week.acceptance}%`, tone: accTone(week.acceptance), sub: "this week" }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Workers", value: `${site.presentToday}/${site.scheduledToday}`, sub: "on the floor today", tone: presTone(site.presentToday, site.scheduledToday), to: `/sites/${site.id}/today` }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Workers", value: `${site.presentToday}/${site.scheduledToday}`, sub: "on site today", tone: presTone(site.presentToday, site.scheduledToday), to: `/sites/${site.id}/today` }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Hardware", value: hw.length, sub: `${camsOn}/${cams.length} cameras recording`, subTone: camsOn < cams.length ? "amber" : void 0, to: `/sites/${site.id}/hardware` }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Upload", value: lagText(site.uploadLagMin), tone: lagTone(site.uploadLagMin), to: `/sites/${site.id}/today` }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Hardware value", value: fmtINR(assetValue(hw)), sub: risk.length ? `${fmtINR(assetValue(risk))} at risk` : `${hw.length} pieces`, subTone: risk.length ? "red" : void 0, to: `/sites/${site.id}/hardware` })
@@ -14969,7 +14992,7 @@
           /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Card, { title: "Why recordings get rejected", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "faq", children: [
             /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
               /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "Camera \u2014 visible, steady, lit" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "The hands and the work piece must stay in frame with enough light to see them. Tighten the head strap, tilt slightly down so the bench top sits mid-frame, and check the first minute on the phone before walking away." })
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "The hands and the work piece must stay in frame with enough light to see them. Tighten the head strap, tilt slightly down so the work surface sits mid-frame, and check the first minute on the phone before walking away." })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
               /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "Task \u2014 right step, right worker" }),
@@ -14977,7 +15000,7 @@
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
               /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "Coverage \u2014 full duration, no gaps" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "Idle time is not validated. Pause when the line stops, resume when work restarts, and keep the power bank cable clipped so the clip does not end early." })
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "Idle time is not validated. Pause when work stops, resume when it restarts, and keep the power bank cable clipped so the clip does not end early." })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
               /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "How much is an hour worth to us?" }),

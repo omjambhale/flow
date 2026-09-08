@@ -65,6 +65,31 @@ const textile: Process = {
   ],
 }
 
+const kitchen: Process = {
+  id: 'p-kitchen',
+  name: 'Cloud kitchen · order to dispatch',
+  steps: [
+    step(1, 'Receive', [['Receive and store ingredients', 3]]),
+    step(2, 'Prep', [['Wash and chop vegetables', 6], ['Marinate', 4]]),
+    step(3, 'Cook', [['Cook on the range', 8], ['Fry', 4]]),
+    step(4, 'Pack', [['Portion and pack orders', 6], ['Seal and label', 4]]),
+    step(5, 'Dispatch', [['Hand over to riders', 3]]),
+    step(6, 'Wash', [['Dishwashing', 4], ['Clean the station', 4]]),
+  ],
+}
+
+const fulfilment: Process = {
+  id: 'p-fulfilment',
+  name: 'Fulfilment · receive to dispatch',
+  steps: [
+    step(1, 'Receive', [['Unload and scan', 4]]),
+    step(2, 'Putaway', [['Shelve by location', 5]]),
+    step(3, 'Pick', [['Pick to tote', 10]]),
+    step(4, 'Pack', [['Pack and label', 8]]),
+    step(5, 'Dispatch', [['Sort by route', 4], ['Load vans', 4]]),
+  ],
+}
+
 /* ---------- sites ---------- */
 
 const sites: Site[] = [
@@ -74,8 +99,8 @@ const sites: Site[] = [
     uploadLagMin: 35, scheduledToday: 42, presentToday: 39, startedOn: '2026-07-14',
   },
   {
-    id: 'HL021', name: 'Sri Ganesh Garments', city: 'Coimbatore', state: 'Tamil Nadu',
-    type: 'Textile and garments', stage: 'live', ratePerHour: 390, process: textile,
+    id: 'HL021', name: 'Annapoorna Cloud Kitchen', city: 'Coimbatore', state: 'Tamil Nadu',
+    type: 'Cloud kitchen', stage: 'live', ratePerHour: 390, process: kitchen,
     uploadLagMin: 4380, scheduledToday: 40, presentToday: 22, startedOn: '2026-08-03',
   },
   {
@@ -84,8 +109,8 @@ const sites: Site[] = [
     uploadLagMin: 0, scheduledToday: 0, presentToday: 0, startedOn: '',
   },
   {
-    id: 'HL031', name: 'Kaveri Castings', city: 'Belagavi', state: 'Karnataka',
-    type: 'Foundry and machining', stage: 'recce', ratePerHour: 418, process: foundry,
+    id: 'HL031', name: 'Fresh Basket Fulfilment Centre', city: 'Belagavi', state: 'Karnataka',
+    type: 'E-commerce fulfilment centre', stage: 'recce', ratePerHour: 418, process: fulfilment,
     uploadLagMin: 0, scheduledToday: 0, presentToday: 0, startedOn: '',
   },
   {
@@ -177,11 +202,11 @@ for (const s of sites) {
 
 const reasons = [
   { camera: [35, 60], task: [70, 95], coverage: [70, 95], reason: 'Camera pointed at the ceiling for most of the clip', feedback: 'The head mount slipped upwards about four minutes in. For the remaining 30 minutes the frame shows the roof trusses and lights, not the hands or the work piece.', fix: 'Tighten the head strap and ask the worker to look at the work piece when recording starts. Check the first minute on the phone before walking away.' },
-  { camera: [40, 65], task: [70, 95], coverage: [70, 95], reason: 'Too dark to see the hands', feedback: 'Lighting near the furnace mouth is very low and the camera exposure did not compensate. Hands and tool are visible only as silhouettes.', fix: 'Record this step from the side where the shop light falls on the work, or ask the supervisor to switch on the bay light.' },
-  { camera: [45, 70], task: [70, 95], coverage: [65, 90], reason: 'Hands out of frame', feedback: 'The worker\'s hands leave the frame every time the part is placed on the bench. Roughly half of the clip has no hands visible.', fix: 'Mount the camera slightly lower and tilt it down so the bench top is at the centre of the frame.' },
-  { camera: [70, 95], task: [30, 55], coverage: [70, 95], reason: 'Wrong step selected on the app', feedback: 'The clip is labelled "Fettle · Grind flash" but the footage shows CNC loading. The recording is good; only the label is wrong.', fix: 'Choose the step in the app after the worker has started, and confirm the step name on the screen before pressing record.' },
+  { camera: [40, 65], task: [70, 95], coverage: [70, 95], reason: 'Too dark to see the hands', feedback: 'Lighting at this work area is very low and the camera exposure did not compensate. Hands and tools are visible only as silhouettes.', fix: 'Record this step from the side where the light falls on the work, or ask the supervisor to switch on the lights over that area.' },
+  { camera: [45, 70], task: [70, 95], coverage: [65, 90], reason: 'Hands out of frame', feedback: 'The worker\'s hands leave the frame every time the item is put down. Roughly half of the clip has no hands visible.', fix: 'Mount the camera slightly lower and tilt it down so the work surface is at the centre of the frame.' },
+  { camera: [70, 95], task: [30, 55], coverage: [70, 95], reason: 'Wrong step selected on the app', feedback: 'The step chosen in the app does not match the work in the footage. The recording is good; only the label is wrong.', fix: 'Choose the step in the app after the worker has started, and confirm the step name on the screen before pressing record.' },
   { camera: [70, 95], task: [35, 60], coverage: [70, 95], reason: 'Different worker than the one selected', feedback: 'The app shows worker Nagaraj but the person in the clip is not the one registered for this camera today.', fix: 'Reassign the camera in the app when a worker swaps during the shift.' },
-  { camera: [70, 95], task: [70, 95], coverage: [30, 55], reason: 'Long idle stretch, no work happening', feedback: '22 of 48 minutes show the worker waiting for parts. Idle time cannot be validated.', fix: 'Pause the recording when the line stops and resume when work restarts.' },
+  { camera: [70, 95], task: [70, 95], coverage: [30, 55], reason: 'Long idle stretch, no work happening', feedback: '22 of 48 minutes show the worker waiting, with no work happening. Idle time cannot be validated.', fix: 'Pause the recording when work stops and resume when it restarts.' },
   { camera: [70, 95], task: [70, 95], coverage: [35, 60], reason: 'Recording stopped half way', feedback: 'The clip ends abruptly at 14 minutes; the power bank was disconnected.', fix: 'Check the power bank cable is clipped to the belt before the shift starts.' },
 ]
 
@@ -270,8 +295,8 @@ buildInvoice(sites[1], 'HL021-2609A', '1–5 September', day(13), day(2), 'revie
 /* ---------- notifications ---------- */
 
 const notices: Notice[] = [
-  { id: 'N1', kind: 'ops', text: 'Sri Ganesh Garments has not uploaded for 3 days', siteId: 'HL021', href: '/sites/HL021/today', minutesAgo: 40, resolved: false },
-  { id: 'N2', kind: 'hardware', text: 'Power bank PB-051 marked missing at Sri Ganesh Garments', siteId: 'HL021', href: '/sites/HL021/hardware', minutesAgo: 180, resolved: false },
+  { id: 'N1', kind: 'ops', text: 'Annapoorna Cloud Kitchen has not uploaded for 3 days', siteId: 'HL021', href: '/sites/HL021/today', minutesAgo: 40, resolved: false },
+  { id: 'N2', kind: 'hardware', text: 'Power bank PB-051 marked missing at Annapoorna Cloud Kitchen', siteId: 'HL021', href: '/sites/HL021/hardware', minutesAgo: 180, resolved: false },
   { id: 'N3', kind: 'quality', text: '4 recordings need work at Shakti Precision Works this week', siteId: 'HL014', href: '/performance', minutesAgo: 600, resolved: false },
   { id: 'N4', kind: 'payment', text: 'Invoice HL014-2609A scheduled for payment', siteId: 'HL014', href: '/payments/HL014-2609A', minutesAgo: 1500, resolved: true },
   { id: 'N5', kind: 'hardware', text: 'Hardware for Anand Auto Components dispatched (Delhivery DLV-8834-2201)', siteId: 'HL027', href: '/sites/HL027/hardware', minutesAgo: 2900, resolved: true },

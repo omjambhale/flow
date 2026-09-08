@@ -204,7 +204,7 @@ export const assetsAtRisk = (d: Dataset, siteId?: string) =>
   d.assets.filter(a => (!siteId || a.siteId === siteId) && (a.status === 'missing' || a.status === 'damaged'))
 export const assetValue = (list: { value: number }[]) => list.reduce((s, a) => s + a.value, 0)
 
-/** short site name for chart labels: "Sri Ganesh", "Shakti" */
+/** short site name for chart labels: "Annapoorna", "Shakti" */
 export const shortName = (name: string) => { const w = name.split(' '); return w[0].length <= 4 && w[1] ? `${w[0]} ${w[1]}` : w[0] }
 
 /* ----- task coverage and the 20-hour rule ----- */
