@@ -12890,7 +12890,8 @@
       uploadLagMin: 35,
       scheduledToday: 42,
       presentToday: 39,
-      startedOn: "2026-07-14"
+      startedOn: "2026-07-14",
+      endsOn: "2027-01-10"
     },
     {
       id: "HL021",
@@ -12904,7 +12905,8 @@
       uploadLagMin: 4380,
       scheduledToday: 40,
       presentToday: 22,
-      startedOn: "2026-08-03"
+      startedOn: "2026-08-03",
+      endsOn: "2026-11-01"
     },
     {
       id: "HL027",
@@ -13411,6 +13413,16 @@
   var stepExpected = (s) => s.tasks.reduce((sum, t) => sum + t.workers * t.hoursPerWorker, 0);
   var siteTarget = (s) => s.process.steps.reduce((sum, st) => sum + stepExpected(st), 0);
   var siteRecordings = (d, siteId) => d.recordings.filter((r2) => r2.siteId === siteId);
+  var DAY = 864e5;
+  var projectDays = (s) => {
+    if (!s.startedOn) return null;
+    const start = Date.parse(s.startedOn + "T00:00:00Z");
+    const today = Date.parse((s.closedOn || TODAY) + "T00:00:00Z");
+    const elapsed = Math.max(1, Math.round((today - start) / DAY) + 1);
+    if (!s.endsOn) return { elapsed, overdue: 0 };
+    const total = Math.max(1, Math.round((Date.parse(s.endsOn + "T00:00:00Z") - start) / DAY) + 1);
+    return { elapsed, total, daysPct: pct(elapsed, total), overdue: Math.max(0, elapsed - total), endsOn: s.endsOn };
+  };
   var siteHealth = (d, s) => {
     if (s.stage === "closed") return "closed";
     if (s.stage !== "live") return "setting-up";
@@ -13432,6 +13444,17 @@
     hardware: "Hardware on its way",
     live: "Live",
     closed: "Completed"
+  };
+  var attentionReasons = (d, s) => {
+    const out = [];
+    if (s.stage !== "live") return out;
+    if (s.uploadLagMin > 24 * 60) out.push(`No upload for ${Math.floor(s.uploadLagMin / 1440)} days`);
+    const sum = summarise(thisWeek(siteRecordings(d, s.id)));
+    if (sum.acceptance < 80) out.push(`Acceptance ${sum.acceptance}% this week`);
+    if (s.presentToday < s.scheduledToday * 0.7) out.push(`Only ${s.presentToday} of ${s.scheduledToday} present today`);
+    const missing = d.assets.filter((a2) => a2.siteId === s.id && (a2.status === "missing" || a2.status === "damaged"));
+    if (missing.length) out.push(`${missing.length} hardware missing or damaged`);
+    return out;
   };
   var invoiceRejectedHours = (i) => i.adjustments.reduce((s, a2) => s + a2.hours, 0);
   var invoiceGross = (i) => (i.approvedHours + invoiceRejectedHours(i)) * i.ratePerHour;
@@ -13926,21 +13949,33 @@
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Card, { title: "Steps in this process", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "cpad", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(HBars, { data: steps.map((st) => ({ label: `${st.order}. ${st.name}`, value: stepExpected(st) })), format: (v) => `${v}h` }) }) })
       ] });
     }
+    const days = projectDays(site);
+    const hoursPct = pct(all.acceptedHours, target);
+    const paceTone = !days?.daysPct ? void 0 : days.overdue > 0 || days.daysPct - hoursPct >= 25 ? "red" : days.daysPct - hoursPct >= 12 ? "amber" : void 0;
     return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
         PageH,
         {
           title: site.name,
           sub: `${site.id} \xB7 ${site.city}, ${site.state} \xB7 ${site.type} \xB7 since ${fmtDate(site.startedOn)}`,
-          right: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Chip, { tone: toneOf(healthLabel[health]), children: healthLabel[health] })
+          right: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { title: attentionReasons(data, site).join(" \xB7 ") || void 0, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Chip, { tone: toneOf(healthLabel[health]), children: healthLabel[health] }) })
         }
       ),
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "kpis", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Progress", value: `${pct(all.acceptedHours, target)}%`, sub: `${fmtHours(all.acceptedHours)} of ${fmtHours(target)}` }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Progress", value: `${hoursPct}%`, sub: `${fmtHours(all.acceptedHours)} of ${fmtHours(target)}` }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          Kpi,
+          {
+            label: "Days",
+            value: days ? days.total ? `${days.elapsed}/${days.total}` : String(days.elapsed) : "\u2014",
+            tone: paceTone,
+            sub: !days ? "not started" : days.overdue > 0 ? `${days.overdue} days past the end date` : days.endsOn ? `ends ${fmtDate(days.endsOn)}` : "open-ended",
+            subTone: days && days.overdue > 0 ? "red" : void 0
+          }
+        ),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Acceptance", value: `${week.acceptance}%`, tone: accTone(week.acceptance), sub: "this week" }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Workers", value: `${site.presentToday}/${site.scheduledToday}`, sub: "on site today", tone: presTone(site.presentToday, site.scheduledToday), to: `/sites/${site.id}/today` }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Hardware", value: hw.length, sub: `${camsOn}/${cams.length} cameras recording`, subTone: camsOn < cams.length ? "amber" : void 0, to: `/sites/${site.id}/hardware` }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Upload", value: lagText(site.uploadLagMin), tone: lagTone(site.uploadLagMin), to: `/sites/${site.id}/today` }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Hardware value", value: fmtINR(assetValue(hw)), sub: risk.length ? `${fmtINR(assetValue(risk))} at risk` : `${hw.length} pieces`, subTone: risk.length ? "red" : void 0, to: `/sites/${site.id}/hardware` })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Card, { title: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [

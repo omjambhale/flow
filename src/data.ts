@@ -96,12 +96,12 @@ const sites: Site[] = [
   {
     id: 'HL014', name: 'Shakti Precision Works', city: 'Bengaluru', state: 'Karnataka',
     type: 'Foundry and machining', stage: 'live', ratePerHour: 418, process: foundry,
-    uploadLagMin: 35, scheduledToday: 42, presentToday: 39, startedOn: '2026-07-14',
+    uploadLagMin: 35, scheduledToday: 42, presentToday: 39, startedOn: '2026-07-14', endsOn: '2027-01-10',
   },
   {
     id: 'HL021', name: 'Annapoorna Cloud Kitchen', city: 'Coimbatore', state: 'Tamil Nadu',
     type: 'Cloud kitchen', stage: 'live', ratePerHour: 390, process: kitchen,
-    uploadLagMin: 4380, scheduledToday: 40, presentToday: 22, startedOn: '2026-08-03',
+    uploadLagMin: 4380, scheduledToday: 40, presentToday: 22, startedOn: '2026-08-03', endsOn: '2026-11-01',
   },
   {
     id: 'HL027', name: 'Anand Auto Components', city: 'Hosur', state: 'Tamil Nadu',

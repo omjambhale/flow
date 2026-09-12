@@ -5,7 +5,7 @@ import { HBars } from '../components/charts'
 import type { Site, Step } from '../types'
 import {
   assetValue, assetsAtRisk, byReason, cameraOutput, fmtDate, fmtHours, fmtINR, healthLabel, hrs, isGood, pct, siteHealth, siteRecordings,
-  siteTarget, stageLabel, statusLabel, stepExpected, summarise, thisWeek, titleOf, workerStats, taskCoverage, workerTaskHours, CAP_HOURS,
+  siteTarget, stageLabel, statusLabel, projectDays, attentionReasons, stepExpected, summarise, thisWeek, titleOf, workerStats, taskCoverage, workerTaskHours, CAP_HOURS,
 } from '../derive'
 
 const stepDone = (recs: ReturnType<typeof siteRecordings>, step: Step) => hrs(recs.filter(r => r.stepId === step.id && isGood(r)).reduce((s, r) => s + r.minutes, 0))
@@ -177,16 +177,25 @@ export function SiteDetail({ id }: { id: string }) {
       </>
     )
   }
+  const days = projectDays(site)
+  const hoursPct = pct(all.acceptedHours, target)
+  // Red when the calendar is well ahead of the hours actually banked — that is the site in trouble.
+  const paceTone: Tone | undefined = !days?.daysPct ? undefined
+    : days.overdue > 0 || days.daysPct - hoursPct >= 25 ? 'red'
+    : days.daysPct - hoursPct >= 12 ? 'amber' : undefined
   return (
     <>
       <PageH title={site.name} sub={`${site.id} · ${site.city}, ${site.state} · ${site.type} · since ${fmtDate(site.startedOn)}`}
-        right={<Chip tone={toneOf(healthLabel[health])}>{healthLabel[health]}</Chip>} />
+        right={<span title={attentionReasons(data, site).join(' · ') || undefined}><Chip tone={toneOf(healthLabel[health])}>{healthLabel[health]}</Chip></span>} />
       <div className="kpis">
-        <Kpi label="Progress" value={`${pct(all.acceptedHours, target)}%`} sub={`${fmtHours(all.acceptedHours)} of ${fmtHours(target)}`} />
+        <Kpi label="Progress" value={`${hoursPct}%`} sub={`${fmtHours(all.acceptedHours)} of ${fmtHours(target)}`} />
+        <Kpi label="Days" value={days ? (days.total ? `${days.elapsed}/${days.total}` : String(days.elapsed)) : '—'}
+          tone={paceTone}
+          sub={!days ? 'not started' : days.overdue > 0 ? `${days.overdue} days past the end date` : days.endsOn ? `ends ${fmtDate(days.endsOn)}` : 'open-ended'}
+          subTone={days && days.overdue > 0 ? 'red' : undefined} />
         <Kpi label="Acceptance" value={`${week.acceptance}%`} tone={accTone(week.acceptance)} sub="this week" />
         <Kpi label="Workers" value={`${site.presentToday}/${site.scheduledToday}`} sub="on site today" tone={presTone(site.presentToday, site.scheduledToday)} to={`/sites/${site.id}/today`} />
         <Kpi label="Hardware" value={hw.length} sub={`${camsOn}/${cams.length} cameras recording`} subTone={camsOn < cams.length ? 'amber' : undefined} to={`/sites/${site.id}/hardware`} />
-        <Kpi label="Upload" value={lagText(site.uploadLagMin)} tone={lagTone(site.uploadLagMin)} to={`/sites/${site.id}/today`} />
         <Kpi label="Hardware value" value={fmtINR(assetValue(hw))} sub={risk.length ? `${fmtINR(assetValue(risk))} at risk` : `${hw.length} pieces`} subTone={risk.length ? 'red' : undefined} to={`/sites/${site.id}/hardware`} />
       </div>
 

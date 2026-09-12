@@ -52,6 +52,8 @@ export interface Site {
   scheduledToday: number
   presentToday: number
   startedOn: string
+  /** planned last day of collection, from the recce; omit for open-ended sites */
+  endsOn?: string
   /** for closed sites */
   closedOn?: string
   finalHours?: number

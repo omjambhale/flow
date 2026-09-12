@@ -71,6 +71,19 @@ export const siteTarget = (s: Site) => s.process.steps.reduce((sum, st) => sum +
 
 export const siteRecordings = (d: Dataset, siteId: string) => d.recordings.filter(r => r.siteId === siteId)
 
+/** How far through its planned run a site is. null when it has not started. */
+export interface ProjectDays { elapsed: number; total?: number; daysPct?: number; overdue: number; endsOn?: string }
+const DAY = 86400000
+export const projectDays = (s: Site): ProjectDays | null => {
+  if (!s.startedOn) return null
+  const start = Date.parse(s.startedOn + 'T00:00:00Z')
+  const today = Date.parse((s.closedOn || TODAY) + 'T00:00:00Z')
+  const elapsed = Math.max(1, Math.round((today - start) / DAY) + 1)
+  if (!s.endsOn) return { elapsed, overdue: 0 }
+  const total = Math.max(1, Math.round((Date.parse(s.endsOn + 'T00:00:00Z') - start) / DAY) + 1)
+  return { elapsed, total, daysPct: pct(elapsed, total), overdue: Math.max(0, elapsed - total), endsOn: s.endsOn }
+}
+
 export const siteHealth = (d: Dataset, s: Site): SiteHealth => {
   if (s.stage === 'closed') return 'closed'
   if (s.stage !== 'live') return 'setting-up'
