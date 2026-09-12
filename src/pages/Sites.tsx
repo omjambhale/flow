@@ -43,7 +43,10 @@ export function Sites() {
   const workersThisWeek = new Set(thisWeek(data.recordings).map(r => r.workerId)).size
   return (
     <>
-      <PageH title="Sites" right={<a href="/" className="btn ghost">+ Add a site</a>} />
+      <PageH title="Sites" right={<div style={{ display: 'flex', gap: 10 }}>
+        <Link to="/daily" className="btn ghost">Daily report</Link>
+        <a href="/" className="btn ghost">+ Add a site</a>
+      </div>} />
       <div className="kpis k4">
         <Kpi label="Accepted this week" value={fmtHours(week.acceptedHours)} sub={`${fmtHours(summarise(data.recordings).acceptedHours)} all time`} to="/performance" />
         <Kpi label="Acceptance" value={`${week.acceptance}%`} tone={accTone(week.acceptance)} sub={`${week.bad} need work`} to="/performance" />

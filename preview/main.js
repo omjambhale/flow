@@ -12748,11 +12748,11 @@
   });
 
   // src/main.tsx
-  var import_react9 = __toESM(require_react(), 1);
+  var import_react10 = __toESM(require_react(), 1);
   var import_client = __toESM(require_client(), 1);
 
   // src/App.tsx
-  var import_react8 = __toESM(require_react(), 1);
+  var import_react9 = __toESM(require_react(), 1);
 
   // src/router.tsx
   var import_react = __toESM(require_react(), 1);
@@ -13032,6 +13032,13 @@
       }
     }
   }
+  var roamer = operators.HL021?.[0];
+  if (roamer) {
+    operators.HL014.push(roamer);
+    people.filter((p) => p.role === "worker" && p.siteId === "HL014").slice(0, 2).forEach((w) => {
+      w.reportsTo = roamer;
+    });
+  }
   people.push({ id: `P${++n}`, name: "Sanjay V", role: "operator", siteId: "HL014", reportsTo: supervisors.HL014, active: false });
   var assets = [];
   var a = 0;
@@ -13099,7 +13106,7 @@
     for (let d = weeks * 7 - 1 + lagDays; d >= lagDays; d--) {
       for (let k = 0; k < perDay; k++) {
         const op = pick(ops);
-        const wk = pick(people.filter((p) => p.reportsTo === op));
+        const wk = pick(people.filter((p) => p.reportsTo === op && p.siteId === site.id));
         const st = pick(stepsFor(site, wk.id));
         const tk = pick(st.tasks);
         const minutes = between(25, 95);
@@ -13173,7 +13180,24 @@
     { id: "N5", kind: "hardware", text: "Hardware for Anand Auto Components dispatched (Delhivery DLV-8834-2201)", siteId: "HL027", href: "/sites/HL027/hardware", minutesAgo: 2900, resolved: true }
   ];
   var dataset = {
-    partner: { id: "PRT-0042", org: "Shakti Precision", ownerName: "Meera Iyer", email: "meera@shaktiprecision.in", phone: "+91 98450 12345", since: "2026-06-30" },
+    partner: {
+      id: "PRT-0042",
+      org: "Shakti Precision",
+      ownerName: "Meera Iyer",
+      email: "meera@shaktiprecision.in",
+      phone: "+91 98450 12345",
+      since: "2026-06-30",
+      billing: {
+        legalName: "Shakti Precision Works Private Limited",
+        address: "14/2 Industrial Suburb, Yeshwanthpur, Bengaluru 560022",
+        state: "Karnataka",
+        gstin: "29ABCDE1234F1Z5",
+        pan: "ABCDE1234F",
+        bankName: "HDFC Bank, Yeshwanthpur",
+        accountNumber: "50100XXXXXX789",
+        ifsc: "HDFC0000123"
+      }
+    },
     sites,
     people,
     assets,
@@ -13456,6 +13480,7 @@
     if (missing.length) out.push(`${missing.length} hardware missing or damaged`);
     return out;
   };
+  var personRecordings = (d, p) => d.recordings.filter((r2) => p.role === "operator" ? r2.operatorId === p.id : p.role === "worker" ? r2.workerId === p.id : r2.siteId === p.siteId);
   var invoiceRejectedHours = (i) => i.adjustments.reduce((s, a2) => s + a2.hours, 0);
   var invoiceGross = (i) => (i.approvedHours + invoiceRejectedHours(i)) * i.ratePerHour;
   var invoiceDeductions = (i) => i.adjustments.reduce((s, a2) => s + a2.amount, 0);
@@ -13512,6 +13537,36 @@
     const mine = recs.filter((r2) => r2.cameraId === a2.id);
     return { asset: a2, hours: hrs(mine.reduce((s, r2) => s + r2.minutes, 0)), recordings: mine.length, acceptance: summarise(mine).acceptance };
   });
+  var operatorStats = (d, recs = d.recordings) => d.people.filter((p) => p.role === "operator").map((p) => {
+    const mine = recs.filter((r2) => r2.operatorId === p.id);
+    const s = summarise(mine);
+    const rejectedAmount = mine.filter((r2) => r2.status === "rejected").reduce((sum, r2) => sum + r2.minutes / 60 * (d.sites.find((x) => x.id === r2.siteId)?.ratePerHour ?? 0), 0);
+    return {
+      id: p.id,
+      name: p.name,
+      active: p.active,
+      homeSiteId: p.siteId,
+      siteIds: [.../* @__PURE__ */ new Set([p.siteId, ...mine.map((r2) => r2.siteId)])].filter(Boolean),
+      recordings: mine.length,
+      acceptedHours: s.acceptedHours,
+      rejectedHours: s.rejectedHours,
+      rejectedAmount,
+      acceptance: s.acceptance,
+      quality: qualityScore(mine),
+      workers: new Set(mine.map((r2) => r2.workerId)).size,
+      cameras: new Set(mine.map((r2) => r2.cameraId)).size,
+      mainIssue: byReason(mine)[0]?.reason,
+      lastDate: mine.map((r2) => r2.date).sort().pop() ?? ""
+    };
+  });
+  var operatorBySite = (d, operatorId, recs = d.recordings) => {
+    const mine = recs.filter((r2) => r2.operatorId === operatorId);
+    return [...new Set(mine.map((r2) => r2.siteId))].map((siteId) => {
+      const at = mine.filter((r2) => r2.siteId === siteId);
+      const s = summarise(at);
+      return { site: d.sites.find((x) => x.id === siteId), ...s, quality: qualityScore(at), recordings: at.length };
+    }).filter((x) => x.site);
+  };
   var assetsAtRisk = (d, siteId) => d.assets.filter((a2) => (!siteId || a2.siteId === siteId) && (a2.status === "missing" || a2.status === "damaged"));
   var assetValue = (list) => list.reduce((s, a2) => s + a2.value, 0);
   var shortName = (name) => {
@@ -13552,14 +13607,150 @@
       };
     }));
   };
+  var HUMYN_BILLING = {
+    legalName: "Humynai Private Limited",
+    address: "837/1 Binnamangala, 1st Stage, 100 ft Road, Indiranagar, Bengaluru 560038, Karnataka",
+    state: "Karnataka",
+    gstin: "29XXXXXXXXXXXZX",
+    sac: "998319",
+    email: "invoices@humynlabs.ai",
+    terms: "Paid on the next 15-day cycle after Humyn approves the hours."
+  };
+  var GST_RATE = 18;
+  var gstLines = (taxable, partnerState, gstin) => {
+    if (!gstin) return [];
+    const half = GST_RATE / 2;
+    return (partnerState ?? "").trim().toLowerCase() === HUMYN_BILLING.state.toLowerCase() ? [{ label: "CGST", rate: half, amount: taxable * half / 100 }, { label: "SGST", rate: half, amount: taxable * half / 100 }] : [{ label: "IGST", rate: GST_RATE, amount: taxable * GST_RATE / 100 }];
+  };
+  var yesterday = (from = TODAY) => {
+    const d = /* @__PURE__ */ new Date(from + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  };
+  var dailyReport = (d, date) => {
+    const live = d.sites.filter((s) => s.stage === "live");
+    const sites2 = live.map((site) => {
+      const day2 = d.recordings.filter((r2) => r2.siteId === site.id && r2.date === date);
+      const s = summarise(day2);
+      const week = summarise(thisWeek(siteRecordings(d, site.id)));
+      return {
+        site,
+        hours: hrs(day2.reduce((sum2, r2) => sum2 + r2.minutes, 0)),
+        recordings: day2.length,
+        acceptedHours: s.acceptedHours,
+        rejectedHours: s.rejectedHours,
+        present: site.presentToday,
+        scheduled: site.scheduledToday,
+        acceptance: week.acceptance,
+        uploadLagMin: site.uploadLagMin
+      };
+    });
+    const actions = [];
+    live.forEach((site) => attentionReasons(d, site).forEach((text) => actions.push({ site: shortName(site.name), text, href: `/sites/${site.id}` })));
+    d.invoices.filter((i) => i.query).forEach((i) => actions.push({ site: shortName(d.sites.find((s) => s.id === i.siteId)?.name ?? ""), text: `Query open on invoice ${i.number}`, href: `/payments/${i.id}` }));
+    const all = d.recordings.filter((r2) => r2.date === date);
+    const sum = summarise(all);
+    return {
+      date,
+      hours: hrs(all.reduce((s, r2) => s + r2.minutes, 0)),
+      acceptedHours: sum.acceptedHours,
+      rejectedHours: sum.rejectedHours,
+      amount: all.filter(isGood).reduce((s, r2) => s + r2.minutes / 60 * (d.sites.find((x) => x.id === r2.siteId)?.ratePerHour ?? 0), 0),
+      actions,
+      sites: sites2
+    };
+  };
+  var inWords = (n2) => {
+    const a2 = [
+      "",
+      "one",
+      "two",
+      "three",
+      "four",
+      "five",
+      "six",
+      "seven",
+      "eight",
+      "nine",
+      "ten",
+      "eleven",
+      "twelve",
+      "thirteen",
+      "fourteen",
+      "fifteen",
+      "sixteen",
+      "seventeen",
+      "eighteen",
+      "nineteen"
+    ];
+    const b = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+    const two = (x) => x < 20 ? a2[x] : b[Math.floor(x / 10)] + (x % 10 ? "-" + a2[x % 10] : "");
+    const three = (x) => x >= 100 ? `${a2[Math.floor(x / 100)]} hundred${x % 100 ? " " + two(x % 100) : ""}` : two(x);
+    let r2 = Math.round(n2);
+    if (r2 === 0) return "Zero rupees only";
+    const parts = [];
+    const cr = Math.floor(r2 / 1e7);
+    r2 %= 1e7;
+    const lk = Math.floor(r2 / 1e5);
+    r2 %= 1e5;
+    const th = Math.floor(r2 / 1e3);
+    r2 %= 1e3;
+    if (cr) parts.push(`${three(cr)} crore`);
+    if (lk) parts.push(`${three(lk)} lakh`);
+    if (th) parts.push(`${three(th)} thousand`);
+    if (r2) parts.push(three(r2));
+    const t = parts.join(" ");
+    return t.charAt(0).toUpperCase() + t.slice(1) + " rupees only";
+  };
+  var recentPeriods = (n2 = 4) => {
+    const out = [];
+    for (let i = 0; i < n2; i++) {
+      const to = /* @__PURE__ */ new Date(TODAY + "T00:00:00Z");
+      to.setUTCDate(to.getUTCDate() - 1 - i * 7);
+      const from = new Date(to);
+      from.setUTCDate(from.getUTCDate() - 6);
+      const f = from.toISOString().slice(0, 10), t = to.toISOString().slice(0, 10);
+      out.push({ from: f, to: t, label: `${fmtDate(f)} \u2013 ${fmtDate(t)}` });
+    }
+    return out;
+  };
 
   // src/pages/Payments.tsx
   var import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
   var uploaded = [];
   function Payments() {
     const { data } = useApp();
-    const [open, setOpen] = (0, import_react2.useState)(false);
+    const [mode, setMode] = (0, import_react2.useState)("none");
     const [tick, setTick] = (0, import_react2.useState)(0);
+    const bill = data.partner.billing;
+    const periods = recentPeriods(4);
+    const live = data.sites.filter((x) => x.stage === "live");
+    const [t, setT] = (0, import_react2.useState)({ siteId: live[0]?.id ?? "", period: 0, number: `${live[0]?.id ?? "INV"}-${TODAY.slice(2, 4)}${TODAY.slice(5, 7)}` });
+    const tSite = data.sites.find((x) => x.id === t.siteId);
+    const tPeriod = periods[t.period];
+    const tRecs = data.recordings.filter((r2) => r2.siteId === t.siteId && r2.date >= tPeriod.from && r2.date <= tPeriod.to && isGood(r2));
+    const tHours = Math.round(tRecs.reduce((sum, r2) => sum + r2.minutes, 0) / 60 * 10) / 10;
+    const tTaxable = tHours * (tSite?.ratePerHour ?? 0);
+    const tTax = gstLines(tTaxable, bill?.state, bill?.gstin);
+    const tTotal = tTaxable + tTax.reduce((sum, l) => sum + l.amount, 0);
+    const issue = () => {
+      if (!tSite || tHours <= 0) return;
+      uploaded.unshift({
+        id: t.number,
+        number: t.number,
+        siteId: tSite.id,
+        periodLabel: tPeriod.label,
+        from: tPeriod.from,
+        to: tPeriod.to,
+        status: "submitted",
+        approvedHours: tHours,
+        ratePerHour: tSite.ratePerHour,
+        adjustments: [],
+        submittedOn: TODAY
+      });
+      setMode("none");
+      setTick(tick + 1);
+    };
     const [form, setForm] = (0, import_react2.useState)({ siteId: "", period: "", number: "", amount: "", file: "" });
     const submit = (e) => {
       e.preventDefault();
@@ -13568,25 +13759,170 @@
       const amt = Number(form.amount);
       uploaded.unshift({ id: form.number, number: form.number, siteId: site.id, periodLabel: form.period, from: TODAY, to: TODAY, status: "submitted", approvedHours: Math.round(amt / site.ratePerHour * 10) / 10, ratePerHour: site.ratePerHour, adjustments: [], submittedOn: TODAY });
       setForm({ siteId: "", period: "", number: "", amount: "", file: "" });
-      setOpen(false);
+      setMode("none");
       setTick(tick + 1);
     };
     const m = money({ ...data, invoices: [...uploaded, ...data.invoices] });
     const order = ["review", "disputed", "scheduled", "submitted", "draft", "paid"];
     const invoices2 = [...m.invoices].sort((a2, b) => order.indexOf(a2.status) - order.indexOf(b.status) || (b.to > a2.to ? 1 : -1));
     return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(PageH, { title: "Payments", sub: "Every rupee here traces back to a recording Humyn accepted.", right: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "btn", onClick: () => setOpen((o) => !o), children: "Upload invoice" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        PageH,
+        {
+          title: "Payments",
+          sub: "Every rupee here traces back to a recording Humyn accepted.",
+          right: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { display: "flex", gap: 10 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "btn", onClick: () => setMode(mode === "template" ? "none" : "template"), children: "Raise an invoice" }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "btn ghost", onClick: () => setMode(mode === "upload" ? "none" : "upload"), children: "Upload my own" })
+          ] })
+        }
+      ),
       /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "kpis k3", children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Kpi, { label: "Payable now", value: fmtINR(m.payable), sub: m.next ? `next payout ${fmtDate(m.next)}` : "nothing scheduled yet" }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Kpi, { label: "Under review", value: fmtINR(m.review), sub: "Humyn is checking these hours" }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Kpi, { label: "Paid so far", value: fmtINR(m.paid), sub: "since you joined" })
       ] }),
-      open && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Card, { title: "Upload an invoice", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("form", { className: "form", onSubmit: submit, children: [
+      mode === "template" && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Card, { title: "Raise an invoice", className: "mb", children: !bill ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "cpad", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Empty, { title: "Add your billing details first", hint: "Your legal name, address, GST number and bank account print on every invoice. You only enter them once." }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { textAlign: "center", paddingBottom: 18 }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Link, { to: "/profile", className: "btn", children: "Add billing details" }) })
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "form", style: { borderBottom: "1px solid var(--line)" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "f", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { children: "Site" }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("select", { value: t.siteId, onChange: (e) => setT({ ...t, siteId: e.target.value }), children: live.map((x) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: x.id, children: x.name }, x.id)) })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "f", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { children: "Period" }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("select", { value: t.period, onChange: (e) => setT({ ...t, period: Number(e.target.value) }), children: periods.map((p, i) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: i, children: p.label }, p.from)) })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "f", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { children: "Invoice number" }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { value: t.number, onChange: (e) => setT({ ...t, number: e.target.value }) })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "f", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { children: "Invoice date" }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { value: fmtDate(TODAY), readOnly: true })
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "inv-sheet", id: "inv-sheet", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "inv-head", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "e", children: "From" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("b", { children: bill.legalName }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: bill.address }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: bill.gstin ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+                "GSTIN ",
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "ui", children: bill.gstin })
+              ] }) : "Not registered under GST" }),
+              bill.pan && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { children: [
+                "PAN ",
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "ui", children: bill.pan })
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "e", children: "Bill to" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("b", { children: HUMYN_BILLING.legalName }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: HUMYN_BILLING.address }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { children: [
+                "GSTIN ",
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "ui", children: HUMYN_BILLING.gstin })
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "inv-meta", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "kv", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: bill.gstin ? "Tax invoice" : "Bill of supply" }),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("b", { className: "ui", children: t.number })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "kv", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "Date" }),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("b", { children: fmtDate(TODAY) })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "kv", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "Period" }),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("b", { children: tPeriod.label })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "kv", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "Place of supply" }),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("b", { children: HUMYN_BILLING.state })
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("table", { className: "tbl inv-lines", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("tr", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("th", { children: "Description" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("th", { children: "SAC" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("th", { className: "num", children: "Hours" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("th", { className: "num", children: "Rate" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("th", { className: "num", children: "Amount" })
+            ] }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("tbody", { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("tr", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("td", { children: [
+                "Data collection services \xB7 ",
+                tSite?.name,
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "small muted", children: [
+                  "Hours accepted by Humyn Labs, ",
+                  tPeriod.label
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("td", { className: "ui", children: HUMYN_BILLING.sac }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("td", { className: "num", children: tHours.toFixed(1) }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("td", { className: "num", children: fmtINR(tSite?.ratePerHour ?? 0) }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("td", { className: "num", children: fmtINR(tTaxable) })
+            ] }) })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "calc", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "ln", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "Taxable value" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: fmtINR(tTaxable) })
+            ] }),
+            tTax.map((l) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "ln", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { children: [
+                l.label,
+                " @ ",
+                l.rate,
+                "%"
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: fmtINR(l.amount) })
+            ] }, l.label)),
+            tTax.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "ln muted", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "No GST \u2014 not registered" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "\u20B90" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "ln tot", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "Total" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: fmtINR(tTotal) })
+            ] })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "inv-foot", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "e", children: "Amount in words" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("b", { children: inWords(tTotal) })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "e", children: "Pay to" }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { children: [
+                bill.bankName,
+                " \xB7 ",
+                bill.accountNumber,
+                " \xB7 IFSC ",
+                bill.ifsc
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "small muted", children: HUMYN_BILLING.terms })
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "inv-actions", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "btn", onClick: issue, disabled: tHours <= 0, children: "Issue this invoice to Humyn" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "btn ghost", onClick: () => window.print(), children: "Print or save as PDF" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "small muted", children: tHours > 0 ? `${fmtHours(tHours)} accepted at ${tSite?.name} in this period. ${GST_RATE}% GST applied as ${tTax[0]?.label ?? "none"}.` : "Nothing accepted at this site in this period yet \u2014 pick another period." })
+        ] })
+      ] }) }),
+      mode === "upload" && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Card, { title: "Upload your own invoice", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("form", { className: "form", onSubmit: submit, children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "f", children: [
           /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { children: "Site" }),
           /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("select", { value: form.siteId, onChange: (e) => setForm({ ...form, siteId: e.target.value }), required: true, children: [
             /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "", children: "Choose a site" }),
-            data.sites.filter((x) => x.stage === "live").map((x) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: x.id, children: x.name }, x.id))
+            live.map((x) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: x.id, children: x.name }, x.id))
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "f", children: [
@@ -13598,8 +13934,8 @@
           /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { value: form.number, onChange: (e) => setForm({ ...form, number: e.target.value }), placeholder: "Your invoice number", required: true })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "f", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { children: "Amount (\u20B9)" }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { value: form.amount, onChange: (e) => setForm({ ...form, amount: e.target.value.replace(/[^\d]/g, "") }), inputMode: "numeric", placeholder: "Net amount", required: true })
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { children: "Total (\u20B9)" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { value: form.amount, onChange: (e) => setForm({ ...form, amount: e.target.value.replace(/[^\d]/g, "") }), inputMode: "numeric", placeholder: "Including tax", required: true })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "f", style: { gridColumn: "1 / -1" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { children: [
@@ -13610,8 +13946,14 @@
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { gridColumn: "1 / -1", display: "flex", gap: 10, alignItems: "center" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "btn", type: "submit", disabled: !form.siteId || !form.period || !form.number || !form.amount, children: "Submit to Humyn" }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "btn ghost", type: "button", onClick: () => setOpen(false), children: "Cancel" }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "small muted", children: "Humyn matches it against accepted hours and replies within three working days." })
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "btn ghost", type: "button", onClick: () => setMode("none"), children: "Cancel" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: "small muted", children: [
+            "Bill to ",
+            HUMYN_BILLING.legalName,
+            ", GSTIN ",
+            HUMYN_BILLING.gstin,
+            ". The rules are in Help & SOPs."
+          ] })
         ] })
       ] }) }),
       /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Card, { title: "Invoices", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "list", children: [
@@ -13790,7 +14132,10 @@
     const workersTotal = data.people.filter((p) => p.role === "worker" && p.active && live.some((s) => s.id === p.siteId)).length;
     const workersThisWeek = new Set(thisWeek(data.recordings).map((r2) => r2.workerId)).size;
     return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(PageH, { title: "Sites", right: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("a", { href: "/", className: "btn ghost", children: "+ Add a site" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(PageH, { title: "Sites", right: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { display: "flex", gap: 10 }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Link, { to: "/daily", className: "btn ghost", children: "Daily report" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("a", { href: "/", className: "btn ghost", children: "+ Add a site" })
+      ] }) }),
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "kpis k4", children: [
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Accepted this week", value: fmtHours(week.acceptedHours), sub: `${fmtHours(summarise(data.recordings).acceptedHours)} all time`, to: "/performance" }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Kpi, { label: "Acceptance", value: `${week.acceptance}%`, tone: accTone(week.acceptance), sub: `${week.bad} need work`, to: "/performance" }),
@@ -14533,12 +14878,14 @@
     const [period, setPeriod] = (0, import_react4.useState)("week");
     const [siteId, setSiteId] = (0, import_react4.useState)("all");
     const [opId, setOpId] = (0, import_react4.useState)("all");
+    const [camId, setCamId] = (0, import_react4.useState)("all");
     const live = data.sites.filter((x) => x.stage === "live");
     const operators2 = data.people.filter((p) => p.role === "operator" && p.active && (siteId === "all" || p.siteId === siteId));
     const inPeriod = (r2) => period === "week" ? r2.date > weekAgo : period === "last" ? r2.date > lastWeekStart && r2.date <= weekAgo : period === "month" ? r2.date > monthStart : true;
-    const recs = data.recordings.filter((r2) => inPeriod(r2) && (siteId === "all" || r2.siteId === siteId) && (opId === "all" || r2.operatorId === opId));
+    const cameras = data.assets.filter((a2) => a2.type === "camera" && (siteId === "all" || a2.siteId === siteId));
+    const recs = data.recordings.filter((r2) => inPeriod(r2) && (siteId === "all" || r2.siteId === siteId) && (opId === "all" || r2.operatorId === opId) && (camId === "all" || r2.cameraId === camId));
     const s = summarise(recs);
-    const prev = summarise(data.recordings.filter((r2) => r2.date > lastWeekStart && r2.date <= weekAgo && (siteId === "all" || r2.siteId === siteId) && (opId === "all" || r2.operatorId === opId)));
+    const prev = summarise(data.recordings.filter((r2) => r2.date > lastWeekStart && r2.date <= weekAgo && (siteId === "all" || r2.siteId === siteId) && (opId === "all" || r2.operatorId === opId) && (camId === "all" || r2.cameraId === camId)));
     const delta = s.acceptance - prev.acceptance;
     const rejectedAmt = recs.filter((r2) => r2.status === "rejected").reduce((sum, r2) => sum + r2.minutes / 60 * (data.sites.find((x) => x.id === r2.siteId)?.ratePerHour ?? 0), 0);
     const reasons2 = byReason(recs);
@@ -14557,7 +14904,9 @@
     }).sort((a2, b) => b.value - a2.value);
     const workers2 = workerStats(data, recs);
     const quality = qualityScore(recs);
-    const prevQuality = qualityScore(data.recordings.filter((r2) => r2.date > lastWeekStart && r2.date <= weekAgo && (siteId === "all" || r2.siteId === siteId) && (opId === "all" || r2.operatorId === opId)));
+    const prevQuality = qualityScore(data.recordings.filter((r2) => r2.date > lastWeekStart && r2.date <= weekAgo && (siteId === "all" || r2.siteId === siteId) && (opId === "all" || r2.operatorId === opId) && (camId === "all" || r2.cameraId === camId)));
+    const camIds = new Set(cameras.map((c) => c.id));
+    const camUse = cameraOutput(data, recs).filter((c) => camIds.has(c.asset.id) && (camId === "all" || c.asset.id === camId)).sort((a2, b) => a2.hours - b.hours);
     const periodLabel = PERIODS.find((x) => x[0] === period)[1].toLowerCase();
     return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
@@ -14575,6 +14924,7 @@
               /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("select", { className: "sel", value: siteId, onChange: (e) => {
                 setSiteId(e.target.value);
                 setOpId("all");
+                setCamId("all");
               }, children: [
                 /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("option", { value: "all", children: "All sites" }),
                 live.map((x) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("option", { value: x.id, children: x.name }, x.id))
@@ -14588,6 +14938,16 @@
                   p.name,
                   siteId === "all" ? ` \xB7 ${shortName(data.sites.find((x) => x.id === p.siteId)?.name ?? "")}` : ""
                 ] }, p.id))
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("label", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: "Camera" }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("select", { className: "sel", value: camId, onChange: (e) => setCamId(e.target.value), children: [
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("option", { value: "all", children: "All cameras" }),
+                cameras.map((c) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("option", { value: c.id, children: [
+                  c.id,
+                  siteId === "all" ? ` \xB7 ${shortName(data.sites.find((x) => x.id === c.siteId)?.name ?? "")}` : ""
+                ] }, c.id))
               ] })
             ] })
           ] })
@@ -14603,8 +14963,52 @@
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "Why hours were rejected", action: reasons2.length ? { to: "/performance/reason/0", label: "See recordings" } : void 0, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: reasons2.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: reasons2.map((r2, i) => ({ label: r2.reason, value: r2.hours, to: `/performance/reason/${i}`, hint: `${r2.count} recordings` })), format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "Nothing rejected" }) }) }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "Quality score", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(QualityScore, { value: quality, prev: period === "week" ? prevQuality : void 0 }) })
       ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+        Card,
+        {
+          title: "Camera utilisation",
+          className: "mb",
+          action: { to: "/hardware", label: "Hardware tab" },
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("table", { className: "tbl", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("tr", { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "Camera" }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "Site" }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "Held by" }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { className: "num", children: "Hours" }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { className: "num", children: "Recordings" }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { className: "num", children: "Acceptance" }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "State" })
+              ] }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("tbody", { children: [
+                camUse.map((c) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("tr", { className: "click", onClick: () => setCamId(c.asset.id), children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("td", { className: "ui", children: [
+                    c.asset.id,
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "small muted", children: c.asset.label })
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { className: "small", children: shortName(data.sites.find((x) => x.id === c.asset.siteId)?.name ?? "") }),
+                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { className: "small", children: data.people.find((p) => p.id === c.asset.holderId)?.name ?? "\u2014" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { className: `num ${c.hours === 0 ? "red" : ""}`, children: c.hours > 0 ? fmtHours(c.hours) : "nothing" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { className: "num", children: c.recordings }),
+                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { className: `num ${c.recordings === 0 ? "muted" : accTone2(c.acceptance) ?? ""}`, children: c.recordings ? `${c.acceptance}%` : "\u2014" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { className: c.asset.status === "missing" || c.asset.status === "damaged" ? "red" : c.asset.status === "idle" ? "amber" : "", children: c.asset.status })
+                ] }, c.asset.id)),
+                camUse.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("tr", { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { colSpan: 7, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "No cameras in this view" }) }) })
+              ] })
+            ] }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "small muted", style: { padding: "12px 18px", borderTop: "1px solid var(--line)" }, children: "A camera with hours but poor acceptance is usually the hardware; one with no hours is sitting unused and earning nothing. Click a row to filter this page to that camera." })
+          ]
+        }
+      ),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "cgrid mb", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: opId === "all" ? "Rejected hours by operator" : `Rejected hours by worker \xB7 ${operators2.find((p) => p.id === opId)?.name ?? ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: opId === "all" ? byOperator.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: byOperator, format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "No operators in this view" }) : workers2.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: [...workers2].sort((a2, b) => b.rejectedHours - a2.rejectedHours).map((w) => ({ label: w.name, value: w.rejectedHours, to: `/sites/${w.siteId}/operator/${w.operatorId}/worker/${w.id}`, tone: w.acceptance < 80 ? "#C43D2F" : w.acceptance < 92 ? "#D98E04" : void 0, hint: `${w.acceptance}% accepted \xB7 ${w.mainIssue ?? ""}` })), format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "No recordings in this view" }) }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          Card,
+          {
+            title: opId === "all" ? "Rejected hours by operator" : `Rejected hours by worker \xB7 ${operators2.find((p) => p.id === opId)?.name ?? ""}`,
+            action: { to: "/performance/operators", label: "Full operator report" },
+            children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: opId === "all" ? byOperator.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: byOperator, format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "No operators in this view" }) : workers2.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: [...workers2].sort((a2, b) => b.rejectedHours - a2.rejectedHours).map((w) => ({ label: w.name, value: w.rejectedHours, to: `/sites/${w.siteId}/operator/${w.operatorId}/worker/${w.id}`, tone: w.acceptance < 80 ? "#C43D2F" : w.acceptance < 92 ? "#D98E04" : void 0, hint: `${w.acceptance}% accepted \xB7 ${w.mainIssue ?? ""}` })), format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "No recordings in this view" }) })
+          }
+        ),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { children: [
           siteId === "all" && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "Acceptance by site", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: bySite, format: (v) => `${v}%`, max: 100 }) }) }),
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Card, { title: "Weakest steps", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "cpad", children: byStep.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HBars, { data: byStep, format: (v) => `${v}%`, max: 100 }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Empty, { title: "Not enough recordings yet" }) }) })
@@ -14634,9 +15038,309 @@
     ] });
   }
 
-  // src/pages/Hardware.tsx
-  var import_react5 = __toESM(require_react(), 1);
+  // src/pages/Operators.tsx
   var import_jsx_runtime9 = __toESM(require_jsx_runtime(), 1);
+  var accTone3 = (a2) => a2 < 80 ? "red" : a2 < 92 ? "amber" : void 0;
+  var csvUrl = (rows) => {
+    const csv = rows.map((r2) => r2.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    return "data:text/csv;charset=utf-8," + encodeURIComponent("\uFEFF" + csv);
+  };
+  function Operators() {
+    const { data } = useApp();
+    const { go } = useRoute();
+    const stats = operatorStats(data).filter((o) => o.recordings > 0).sort((a2, b) => b.rejectedHours - a2.rejectedHours);
+    const siteName = (id) => shortName(data.sites.find((s) => s.id === id)?.name ?? id);
+    const download = csvUrl([
+      ["Operator", "Sites", "Recordings", "Accepted hours", "Rejected hours", "Rejected value (INR)", "Acceptance %", "Quality score", "Workers", "Cameras", "Main issue", "Last recording"],
+      ...stats.map((o) => [
+        o.name,
+        o.siteIds.map(siteName).join("; "),
+        o.recordings,
+        o.acceptedHours,
+        o.rejectedHours,
+        Math.round(o.rejectedAmount),
+        o.acceptance,
+        o.quality,
+        o.workers,
+        o.cameras,
+        o.mainIssue ?? "",
+        o.lastDate
+      ])
+    ]);
+    return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        PageH,
+        {
+          title: "Operators",
+          sub: "Every operator you employ, across every site they record at.",
+          right: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("a", { className: "btn ghost", href: download, download: "humyn-operators.csv", children: "Export this report" })
+        }
+      ),
+      stats.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Card, { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Empty, { title: "No operator has recorded yet" }) }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(Card, { title: `Your operators \xB7 ${stats.length}`, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("table", { className: "tbl", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Operator" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Sites" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Accepted" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Rejected" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Acceptance" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Quality" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Workers" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Main issue" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", {})
+          ] }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("tbody", { children: stats.map((o) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { className: "click", onClick: () => go(`/performance/operator/${o.id}`), children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("td", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Link, { to: `/performance/operator/${o.id}`, children: o.name }),
+              !o.active && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "small muted", children: "deactivated" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "small", children: o.siteIds.map(siteName).join(", ") }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: fmtHours(o.acceptedHours) }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: `num ${o.rejectedHours > 0 ? "red" : ""}`, children: o.rejectedHours > 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
+              fmtHours(o.rejectedHours),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "small muted", children: fmtINR(o.rejectedAmount) })
+            ] }) : "\u2014" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("td", { className: `num ${accTone3(o.acceptance) ?? ""}`, children: [
+              o.acceptance,
+              "%"
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: `num ${o.quality && scoreTone(o.quality) !== "green" ? scoreTone(o.quality) : ""}`, children: o.quality || "\u2014" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: o.workers }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "small muted", children: o.mainIssue ?? "\u2014" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "arrow", children: "\u203A" })
+          ] }, o.id)) })
+        ] }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "small muted", style: { padding: "12px 18px", borderTop: "1px solid var(--line)" }, children: "Sorted by rejected hours \u2014 the operator at the top is costing you the most. Rejected value is those hours at the site rate." })
+      ] })
+    ] });
+  }
+  function OperatorReport({ id }) {
+    const { data } = useApp();
+    const { go } = useRoute();
+    const p = data.people.find((x) => x.id === id);
+    if (!p) return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Empty, { title: "Operator not found" });
+    const all = personRecordings(data, p);
+    const stat = operatorStats(data).find((o) => o.id === id);
+    const bySite = operatorBySite(data, id);
+    const week = summarise(thisWeek(all));
+    const reasons2 = byReason(all);
+    const workers2 = data.people.filter((w) => w.role === "worker" && w.reportsTo === id);
+    const held = data.assets.filter((a2) => a2.holderId === id);
+    const download = csvUrl([
+      ["Operator", p.name],
+      ["Sites", bySite.map((b) => b.site.name).join("; ")],
+      ["Recordings", all.length],
+      [],
+      ["Site", "Recordings", "Accepted hours", "Rejected hours", "Acceptance %", "Quality"],
+      ...bySite.map((b) => [b.site.name, b.recordings, b.acceptedHours, b.rejectedHours, b.acceptance, b.quality]),
+      [],
+      ["Rejection reason", "Recordings", "Hours"],
+      ...reasons2.map((r2) => [r2.reason, r2.count, r2.hours])
+    ]);
+    return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        PageH,
+        {
+          title: p.name,
+          sub: `Operator \xB7 ${bySite.length} site${bySite.length === 1 ? "" : "s"}${p.phone ? ` \xB7 ${p.phone}` : ""}${p.active ? "" : " \xB7 deactivated"}`,
+          right: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("a", { className: "btn ghost", href: download, download: `${p.name.replace(/\s+/g, "-")}-report.csv`, children: "Export" })
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "kpis", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "Accepted", value: fmtHours(stat?.acceptedHours ?? 0), sub: "all time" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "Rejected", value: fmtHours(stat?.rejectedHours ?? 0), sub: fmtINR(stat?.rejectedAmount ?? 0), tone: (stat?.rejectedHours ?? 0) > 0 ? "red" : void 0 }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "Acceptance", value: `${stat?.acceptance ?? 0}%`, tone: accTone3(stat?.acceptance ?? 100), sub: `${week.acceptance}% this week` }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "Quality score", value: stat?.quality || "\u2014", sub: "out of 100", tone: stat?.quality && scoreTone(stat.quality) !== "green" ? scoreTone(stat.quality) : void 0 }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "Workers", value: workers2.length, sub: "assigned to them" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "Hardware held", value: held.length, sub: held.length ? fmtINR(assetValue(held)) : "nothing issued", to: `/hardware` })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "cgrid mb", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Card, { title: "Site by site", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("table", { className: "tbl", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Site" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Accepted" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Rejected" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Acceptance" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Quality" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", {})
+          ] }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tbody", { children: [
+            bySite.map((b) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { className: "click", onClick: () => go(`/sites/${b.site.id}`), children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("td", { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Link, { to: `/sites/${b.site.id}`, children: b.site.name }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "small muted", children: [
+                  b.recordings,
+                  " recordings"
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: fmtHours(b.acceptedHours) }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: `num ${b.rejectedHours > 0 ? "red" : ""}`, children: b.rejectedHours > 0 ? fmtHours(b.rejectedHours) : "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("td", { className: `num ${accTone3(b.acceptance) ?? ""}`, children: [
+                b.acceptance,
+                "%"
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: `num ${b.quality && scoreTone(b.quality) !== "green" ? scoreTone(b.quality) : ""}`, children: b.quality || "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "arrow", children: "\u203A" })
+            ] }, b.site.id)),
+            bySite.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("tr", { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { colSpan: 6, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Empty, { title: "No recordings yet" }) }) })
+          ] })
+        ] }) }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Card, { title: "Quality", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ring-wrap", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Ring, { value: qualityScore(all), size: 150, label: "out of 100", good: 85, ok: 70, unit: "" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { fontWeight: 700, fontSize: 16 }, children: stat?.mainIssue ?? "Nothing recurring" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "small muted", style: { marginTop: 6, lineHeight: 1.5 }, children: stat?.mainIssue ? "Their most common rejection reason. Fix this one thing first \u2014 it is the largest single gain available on this operator." : "No rejection reason repeats for this operator." })
+          ] })
+        ] }) })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "cgrid mb", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Card, { title: "Why their hours were rejected", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "cpad", children: reasons2.length ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(HBars, { data: reasons2.map((r2) => ({ label: r2.reason, value: r2.hours, hint: `${r2.count} recordings` })), format: (v) => fmtHours(v) }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Empty, { title: "Nothing rejected" }) }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Card, { title: `Workers under them \xB7 ${workers2.length}`, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "list", children: [
+          workers2.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Empty, { title: "No workers assigned" }),
+          workers2.map((w) => {
+            const s = summarise(data.recordings.filter((r2) => r2.workerId === w.id));
+            return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              Row,
+              {
+                to: `/sites/${w.siteId}/operator/${id}/worker/${w.id}`,
+                title: w.name,
+                sub: `${s.count} recordings \xB7 ${data.sites.find((x) => x.id === w.siteId)?.name ?? ""}`,
+                end: `${s.acceptance}%`,
+                endSub: "accepted"
+              },
+              w.id
+            );
+          })
+        ] }) })
+      ] }),
+      held.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Card, { title: `Hardware with ${p.name.split(" ")[0]} \xB7 ${fmtINR(assetValue(held))}`, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("table", { className: "tbl", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Item" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Asset ID" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Status" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Value" })
+        ] }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("tbody", { children: held.map((a2) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { children: a2.label }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "ui small", children: a2.serial }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: a2.status === "missing" || a2.status === "damaged" ? "red" : "", children: a2.status }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: fmtINR(a2.value) })
+        ] }, a2.id)) })
+      ] }) }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "small muted", style: { marginTop: 14 }, children: [
+        "Last recording ",
+        fmtDate(stat?.lastDate),
+        "."
+      ] })
+    ] });
+  }
+
+  // src/pages/Daily.tsx
+  var import_react5 = __toESM(require_react(), 1);
+  var import_jsx_runtime10 = __toESM(require_jsx_runtime(), 1);
+  var lag = (min) => min < 120 ? "Up to date" : min < 1440 ? `${Math.floor(min / 60)} h behind` : `${Math.floor(min / 1440)} days behind`;
+  var lastDays = (n2) => {
+    const out = [];
+    for (let i = 1; i <= n2; i++) {
+      const d = /* @__PURE__ */ new Date(TODAY + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() - i);
+      out.push(d.toISOString().slice(0, 10));
+    }
+    return out;
+  };
+  function Daily() {
+    const { data } = useApp();
+    const { go } = useRoute();
+    const days = lastDays(7);
+    const [date, setDate] = (0, import_react5.useState)(days[0]);
+    const r2 = dailyReport(data, date);
+    const reviewed = r2.acceptedHours + r2.rejectedHours;
+    const acceptance = reviewed > 0 ? pct(r2.acceptedHours, reviewed) : 0;
+    const recordings2 = r2.sites.reduce((sum, x) => sum + x.recordings, 0);
+    const dayRecs = data.recordings.filter((x) => x.date === date);
+    const reviewHours = Math.round(dayRecs.filter((x) => x.status === "review" || x.status === "uploading").reduce((sum, x) => sum + x.minutes, 0) / 60 * 10) / 10;
+    return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        PageH,
+        {
+          title: "Daily report",
+          sub: `${fmtDate(r2.date)} \xB7 across your live sites`,
+          right: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "filters", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: "Day" }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("select", { className: "sel", value: date, onChange: (e) => setDate(e.target.value), children: days.map((d) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: d, children: fmtDate(d) }, d)) })
+          ] }) })
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "kpis k4", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Kpi, { label: "Recorded", value: fmtHours(r2.hours), sub: `${recordings2} recordings`, tone: r2.hours === 0 ? "red" : void 0 }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Kpi, { label: "Under review", value: fmtHours(reviewHours), sub: "verdict within two working days" }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Kpi, { label: "Accepted", value: fmtHours(r2.acceptedHours), sub: reviewed > 0 ? `${fmtINR(r2.amount)} \xB7 ${acceptance}% of what was reviewed` : "nothing reviewed yet", tone: reviewed > 0 && acceptance < 80 ? "red" : void 0 }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Kpi, { label: "Rejected", value: fmtHours(r2.rejectedHours), sub: r2.rejectedHours > 0 ? "record these again" : "nothing so far", tone: r2.rejectedHours > 0 ? "red" : void 0 })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Card, { title: r2.actions.length ? `Needs you today \xB7 ${r2.actions.length}` : "Nothing needs you today", className: "mb", children: r2.actions.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "cpad", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Empty, { title: "All running", hint: "Every site uploaded, attendance is fine and no hardware is missing." }) }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "list", children: [
+        r2.actions.slice(0, 3).map((a2, i) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Link, { to: a2.href, className: "row", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "kind", style: { background: "#C43D2F", alignSelf: "flex-start" } }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "main", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "t", children: a2.text }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "s", children: a2.site })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "arrow", children: "\u203A" })
+        ] }, i)),
+        r2.actions.length > 3 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "small muted", style: { padding: "10px 18px" }, children: [
+          "and ",
+          r2.actions.length - 3,
+          " more, on the sites below"
+        ] })
+      ] }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Card, { title: `Your sites on ${fmtDate(r2.date)}`, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("table", { className: "tbl", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("tr", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("th", { children: "Site" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("th", { className: "num", children: "Recorded" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("th", { className: "num", children: "Accepted" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("th", { className: "num", children: "Workers" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("th", { className: "num", children: [
+            "Acceptance",
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "small muted", style: { fontWeight: 400 }, children: "this week" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("th", { children: "Upload" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("th", {})
+        ] }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("tbody", { children: [
+          r2.sites.map((x) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("tr", { className: "click", onClick: () => go(`/sites/${x.site.id}`), children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("td", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Link, { to: `/sites/${x.site.id}`, children: x.site.name }),
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "small muted", children: x.site.city })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { className: "num", children: x.hours > 0 ? fmtHours(x.hours) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "red", children: "nothing" }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { className: "num", children: fmtHours(x.acceptedHours) }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("td", { className: `num ${x.present < x.scheduled * 0.7 ? "red" : ""}`, children: [
+              x.present,
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "muted", children: [
+                " / ",
+                x.scheduled
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("td", { className: `num ${x.acceptance < 80 ? "red" : x.acceptance < 92 ? "amber" : ""}`, children: [
+              x.acceptance,
+              "%"
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { className: x.uploadLagMin > 1440 ? "red" : "", children: lag(x.uploadLagMin) }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { className: "arrow", children: "\u203A" })
+          ] }, x.site.id)),
+          r2.sites.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("tr", { children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("td", { colSpan: 7, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Empty, { title: "No live sites yet" }) }) })
+        ] })
+      ] }) }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "small muted", style: { marginTop: 14 }, children: [
+        "This report reaches you by email every morning. Turn it off or change the time in ",
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Link, { to: "/profile", children: "your profile" }),
+        "."
+      ] })
+    ] });
+  }
+
+  // src/pages/Hardware.tsx
+  var import_react6 = __toESM(require_react(), 1);
+  var import_jsx_runtime11 = __toESM(require_jsx_runtime(), 1);
   var TYPES = [["camera", "Cameras"], ["sd", "SD cards"], ["powerbank", "Power banks"], ["mount", "Mounts"], ["reader", "Readers"], ["cable", "Cables"], ["junction", "Junction boxes"]];
   var hardwareCsv = (d) => {
     const label = { "in-use": "In use", idle: "Idle", transit: "In transit", missing: "Missing", damaged: "Damaged" };
@@ -14649,8 +15353,8 @@
   function Hardware() {
     const { data } = useApp();
     const { go } = useRoute();
-    const [siteId, setSiteId] = (0, import_react5.useState)("all");
-    const [opId, setOpId] = (0, import_react5.useState)("all");
+    const [siteId, setSiteId] = (0, import_react6.useState)("all");
+    const [opId, setOpId] = (0, import_react6.useState)("all");
     const opsAll = data.people.filter((p) => p.role === "operator" && p.active && data.assets.some((a2) => a2.holderId === p.id) && (siteId === "all" || p.siteId === siteId));
     const all = data.assets.filter((a2) => (siteId === "all" || a2.siteId === siteId) && (opId === "all" || a2.holderId === opId));
     const custody = all.filter((a2) => a2.status !== "transit");
@@ -14662,146 +15366,156 @@
     const zero = out.filter((c) => c.hours === 0);
     const sites2 = data.sites.filter((s) => all.some((a2) => a2.siteId === s.id));
     const types = TYPES.filter(([t]) => all.some((a2) => a2.type === t));
-    return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
         PageH,
         {
           title: "Hardware",
           sub: "Humyn's equipment in your custody. You are liable for its value until it is returned.",
-          right: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "filters", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "Site" }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("select", { className: "sel", value: siteId, onChange: (e) => {
+          right: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "filters", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("label", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Site" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("select", { className: "sel", value: siteId, onChange: (e) => {
                 setSiteId(e.target.value);
                 setOpId("all");
               }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("option", { value: "all", children: "All sites" }),
-                data.sites.filter((x) => data.assets.some((a2) => a2.siteId === x.id)).map((x) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("option", { value: x.id, children: x.name }, x.id))
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { value: "all", children: "All sites" }),
+                data.sites.filter((x) => data.assets.some((a2) => a2.siteId === x.id)).map((x) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { value: x.id, children: x.name }, x.id))
               ] })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "Operator" }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("select", { className: "sel", value: opId, onChange: (e) => setOpId(e.target.value), children: [
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("option", { value: "all", children: "All operators" }),
-                opsAll.map((p) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("option", { value: p.id, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("label", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Operator" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("select", { className: "sel", value: opId, onChange: (e) => setOpId(e.target.value), children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { value: "all", children: "All operators" }),
+                opsAll.map((p) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("option", { value: p.id, children: [
                   p.name,
                   siteId === "all" ? ` \xB7 ${shortName(data.sites.find((x) => x.id === p.siteId)?.name ?? "")}` : ""
                 ] }, p.id))
               ] })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("a", { className: "btn ghost", href: hardwareCsv({ ...data, assets: all }), download: "humyn-hardware-list.csv", children: all.length === data.assets.length ? "Export full hardware list" : `Export ${all.length} pieces` })
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("a", { className: "btn ghost", href: hardwareCsv({ ...data, assets: all }), download: "humyn-hardware-list.csv", children: all.length === data.assets.length ? "Export full hardware list" : `Export ${all.length} pieces` })
           ] })
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "kpis", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "In custody", value: custody.length, sub: opId !== "all" ? "with this operator" : `${sites2.filter((s) => s.stage === "live").length} site${sites2.filter((s) => s.stage === "live").length === 1 ? "" : "s"}` }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "Value in custody", value: fmtINR(assetValue(custody)), sub: "replacement cost" }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "At risk", value: risk.length ? fmtINR(assetValue(risk)) : "\u20B90", sub: `${risk.length} missing or damaged`, tone: risk.length ? "red" : void 0 }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "Idle cameras", value: idle.length, sub: idle.length ? `${fmtINR(assetValue(idle))} not earning` : "all in use", tone: idle.length ? "amber" : void 0 }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "Zero output", value: zero.length, sub: "cameras, this week", tone: zero.length ? "red" : void 0 }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Kpi, { label: "In transit", value: transit.length, sub: transit.length ? fmtINR(assetValue(transit)) : "\u2014" })
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "kpis", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Kpi, { label: "In custody", value: custody.length, sub: opId !== "all" ? "with this operator" : `${sites2.filter((s) => s.stage === "live").length} site${sites2.filter((s) => s.stage === "live").length === 1 ? "" : "s"}` }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Kpi, { label: "Value in custody", value: fmtINR(assetValue(custody)), sub: "replacement cost" }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Kpi, { label: "At risk", value: risk.length ? fmtINR(assetValue(risk)) : "\u20B90", sub: `${risk.length} missing or damaged`, tone: risk.length ? "red" : void 0 }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Kpi, { label: "Idle cameras", value: idle.length, sub: idle.length ? `${fmtINR(assetValue(idle))} not earning` : "all in use", tone: idle.length ? "amber" : void 0 }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Kpi, { label: "Zero output", value: zero.length, sub: "cameras, this week", tone: zero.length ? "red" : void 0 }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Kpi, { label: "In transit", value: transit.length, sub: transit.length ? fmtINR(assetValue(transit)) : "\u2014" })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Card, { className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("table", { className: "tbl", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Site" }),
-          types.map(([t, l]) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: l }, t)),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Total value" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "At risk" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Idle" })
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Card, { className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("table", { className: "tbl", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("tr", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { children: "Site" }),
+          types.map(([t, l]) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: l }, t)),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: "Total value" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: "At risk" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: "Idle" })
         ] }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tbody", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("tbody", { children: [
           sites2.map((s) => {
             const mine = all.filter((a2) => a2.siteId === s.id);
             const r2 = assetsAtRisk(data, s.id);
             const i = mine.filter((a2) => a2.status === "idle");
-            return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("td", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Link, { to: `/hardware/${s.id}`, children: s.name }),
-                s.stage !== "live" && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "small muted", children: " \xB7 in transit" })
+            return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("tr", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("td", { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Link, { to: `/hardware/${s.id}`, children: s.name }),
+                s.stage !== "live" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "small muted", children: " \xB7 in transit" })
               ] }),
-              types.map(([t]) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: mine.filter((a2) => a2.type === t).length || "\u2014" }, t)),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: fmtINR(assetValue(mine)) }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: `num ${r2.length ? "red" : ""}`, children: r2.length ? fmtINR(assetValue(r2)) : "\u2014" }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: `num ${i.length ? "amber" : ""}`, children: i.length || "\u2014" })
+              types.map(([t]) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "num", children: mine.filter((a2) => a2.type === t).length || "\u2014" }, t)),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "num", children: fmtINR(assetValue(mine)) }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: `num ${r2.length ? "red" : ""}`, children: r2.length ? fmtINR(assetValue(r2)) : "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: `num ${i.length ? "amber" : ""}`, children: i.length || "\u2014" })
             ] }, s.id);
           }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { style: { fontWeight: 700 }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { children: "Total" }),
-            types.map(([t]) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: all.filter((a2) => a2.type === t).length }, t)),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: fmtINR(assetValue(all)) }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: `num ${risk.length ? "red" : ""}`, children: risk.length ? fmtINR(assetValue(risk)) : "\u2014" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: `num ${idle.length ? "amber" : ""}`, children: idle.length || "\u2014" })
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("tr", { style: { fontWeight: 700 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { children: "Total" }),
+            types.map(([t]) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "num", children: all.filter((a2) => a2.type === t).length }, t)),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "num", children: fmtINR(assetValue(all)) }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: `num ${risk.length ? "red" : ""}`, children: risk.length ? fmtINR(assetValue(risk)) : "\u2014" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: `num ${idle.length ? "amber" : ""}`, children: idle.length || "\u2014" })
           ] })
         ] })
       ] }) }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Card, { title: "By operator \xB7 who holds what", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("table", { className: "tbl", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Operator" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Site" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Cameras" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "SD cards" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Power banks" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Other" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Value held" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Output this week" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Status" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", {})
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Card, { title: "By operator \xB7 who holds what", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("table", { className: "tbl", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("tr", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { children: "Operator" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { children: "Site" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: "Cameras" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: "SD cards" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: "Power banks" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: "Other" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: "Value held" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: "Output this week" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { children: "Status" }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", {})
         ] }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("tbody", { children: opsAll.filter((p) => opId === "all" || p.id === opId).map((p) => {
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("tbody", { children: opsAll.filter((p) => opId === "all" || p.id === opId).map((p) => {
           const mine = all.filter((a2) => a2.holderId === p.id);
           const n2 = (t) => mine.filter((a2) => a2.type === t).length;
           const other = mine.filter((a2) => !["camera", "sd", "powerbank"].includes(a2.type)).length;
           const hrsOut = out.filter((c) => c.asset.holderId === p.id).reduce((t, c) => t + c.hours, 0);
           const bad = mine.filter((a2) => a2.status === "missing" || a2.status === "damaged"), idleMine = mine.filter((a2) => a2.status === "idle");
-          return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { className: "click", onClick: () => go(`/sites/${p.siteId}/operator/${p.id}`), children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Link, { to: `/sites/${p.siteId}/operator/${p.id}`, children: p.name }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "small muted", children: shortName(data.sites.find((s) => s.id === p.siteId)?.name ?? "") }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: n2("camera") }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: n2("sd") }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: n2("powerbank") }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: other || "\u2014" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: fmtINR(assetValue(mine)) }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: `num ${hrsOut === 0 ? "red" : ""}`, children: fmtHours(hrsOut) }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: bad.length ? "red" : idleMine.length ? "amber" : "green", children: bad.length ? `${bad.length} missing/damaged` : idleMine.length ? `${idleMine.length} idle` : "All in use" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "arrow", children: "\u203A" })
+          return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("tr", { className: "click", onClick: () => go(`/sites/${p.siteId}/operator/${p.id}`), children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Link, { to: `/sites/${p.siteId}/operator/${p.id}`, children: p.name }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "small muted", children: shortName(data.sites.find((s) => s.id === p.siteId)?.name ?? "") }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "num", children: n2("camera") }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "num", children: n2("sd") }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "num", children: n2("powerbank") }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "num", children: other || "\u2014" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "num", children: fmtINR(assetValue(mine)) }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: `num ${hrsOut === 0 ? "red" : ""}`, children: fmtHours(hrsOut) }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: bad.length ? "red" : idleMine.length ? "amber" : "green", children: bad.length ? `${bad.length} missing/damaged` : idleMine.length ? `${idleMine.length} idle` : "All in use" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "arrow", children: "\u203A" })
           ] }, p.id);
         }) })
       ] }) }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "cgrid", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Card, { title: `Needs action \xB7 ${risk.length + idle.length}`, children: risk.length + idle.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Empty, { title: "Everything accounted for" }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("table", { className: "tbl", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Item" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Site" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Holder" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "Status" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { className: "num", children: "Value" })
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "cgrid", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Card, { title: `Needs action \xB7 ${risk.length + idle.length}`, children: risk.length + idle.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Empty, { title: "Everything accounted for" }) : /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "tbl-wrap", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("table", { className: "tbl", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("tr", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { children: "Item" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { children: "Site" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { children: "Holder" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { children: "Status" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("th", { className: "num", children: "Value" })
           ] }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("tbody", { children: [...risk, ...idle].map((a2) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("td", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("tbody", { children: [...risk, ...idle].map((a2) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("tr", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("td", { children: [
               a2.label,
               " ",
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "small muted", children: a2.id })
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "small muted", children: a2.id })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "small", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Link, { to: `/hardware/${a2.siteId}`, children: shortName(data.sites.find((s) => s.id === a2.siteId)?.name ?? "") }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "small", children: data.people.find((p) => p.id === a2.holderId)?.name ?? "\u2014" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: a2.status === "idle" ? "amber" : "red", children: a2.status === "idle" ? "Idle" : a2.status === "missing" ? "Missing" : "Damaged" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { className: "num", children: fmtINR(a2.value) })
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "small", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Link, { to: `/hardware/${a2.siteId}`, children: shortName(data.sites.find((s) => s.id === a2.siteId)?.name ?? "") }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "small", children: data.people.find((p) => p.id === a2.holderId)?.name ?? "\u2014" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: a2.status === "idle" ? "amber" : "red", children: a2.status === "idle" ? "Idle" : a2.status === "missing" ? "Missing" : "Damaged" }),
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("td", { className: "num", children: fmtINR(a2.value) })
           ] }, a2.id)) })
         ] }) }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Card, { title: `Camera output this week \xB7 ${cams.length} cameras`, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "cpad", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(HBars, { data: [...out].sort((a2, b) => a2.hours - b.hours).map((c) => ({ label: `${c.asset.id} \xB7 ${shortName(data.sites.find((s) => s.id === c.asset.siteId)?.name ?? "")}`, value: c.hours, tone: c.hours === 0 ? "#C43D2F" : void 0, to: `/hardware/${c.asset.siteId}`, hint: `${c.recordings} recordings \xB7 ${c.acceptance}% accepted` })), format: (v) => fmtHours(v) }) }) })
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Card, { title: `Camera output this week \xB7 ${cams.length} cameras`, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "cpad", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(HBars, { data: [...out].sort((a2, b) => a2.hours - b.hours).map((c) => ({ label: `${c.asset.id} \xB7 ${shortName(data.sites.find((s) => s.id === c.asset.siteId)?.name ?? "")}`, value: c.hours, tone: c.hours === 0 ? "#C43D2F" : void 0, to: `/hardware/${c.asset.siteId}`, hint: `${c.recordings} recordings \xB7 ${c.acceptance}% accepted` })), format: (v) => fmtHours(v) }) }) })
       ] })
     ] });
   }
 
   // src/pages/Profile.tsx
-  var import_react6 = __toESM(require_react(), 1);
-  var import_jsx_runtime10 = __toESM(require_jsx_runtime(), 1);
+  var import_react7 = __toESM(require_react(), 1);
+  var import_jsx_runtime12 = __toESM(require_jsx_runtime(), 1);
   var added = [];
   function Profile() {
     const { data } = useApp();
-    const [tick, setTick] = (0, import_react6.useState)(0);
-    const [form, setForm] = (0, import_react6.useState)({ name: "", phone: "", siteId: "", role: "operator" });
-    const [prefs, setPrefs] = (0, import_react6.useState)({ channel: "whatsapp", lang: "en", low: false, ops: true, quality: true, payment: true, hardware: true });
+    const [tick, setTick] = (0, import_react7.useState)(0);
+    const [form, setForm] = (0, import_react7.useState)({ name: "", phone: "", siteId: "", role: "operator" });
+    const [prefs, setPrefs] = (0, import_react7.useState)({ channel: "whatsapp", lang: "en", low: false, ops: true, quality: true, payment: true, hardware: true });
+    const [daily, setDaily] = (0, import_react7.useState)({ on: true, time: "08:00", channel: "email", sites: "all", extra: "" });
+    const [editBill, setEditBill] = (0, import_react7.useState)(false);
+    const blank = { legalName: data.partner.org, address: "", state: "", gstin: "", pan: "", bankName: "", accountNumber: "", ifsc: "" };
+    const [bill, setBill] = (0, import_react7.useState)(data.partner.billing ?? blank);
+    const saveBill = (e) => {
+      e.preventDefault();
+      data.partner.billing = { ...bill, gstin: bill.gstin?.trim() || void 0 };
+      setEditBill(false);
+      setTick(tick + 1);
+    };
     const people2 = [...data.people, ...added].filter((p) => p.role !== "worker");
     const submit = (e) => {
       e.preventDefault();
@@ -14810,22 +15524,22 @@
       setForm({ name: "", phone: "", siteId: "", role: "operator" });
       setTick(tick + 1);
     };
-    return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(PageH, { title: "Your profile", sub: `${data.partner.ownerName} \xB7 ${data.partner.org} \xB7 partner since ${fmtDate(data.partner.since)}` }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "grid2", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Card, { title: "Account", className: "mb", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "row", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "main", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "t", children: data.partner.ownerName }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "s", children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(PageH, { title: "Your profile", sub: `${data.partner.ownerName} \xB7 ${data.partner.org} \xB7 partner since ${fmtDate(data.partner.since)}` }),
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "grid2", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Card, { title: "Account", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "row", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "main", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "t", children: data.partner.ownerName }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "s", children: [
                 data.partner.email,
                 " \xB7 ",
                 data.partner.phone
               ] })
             ] }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "row", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "main", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "t", children: data.partner.org }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "s", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "row", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "main", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "t", children: data.partner.org }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "s", children: [
                 "Partner ",
                 data.partner.id,
                 " \xB7 ",
@@ -14834,43 +15548,115 @@
               ] })
             ] }) })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Card, { title: "Add a supervisor or operator", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("form", { className: "form", onSubmit: submit, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "f", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("label", { children: "Name" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("input", { value: form.name, onChange: (e) => setForm({ ...form, name: e.target.value }), placeholder: "Full name", required: true })
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Card, { title: "Billing details", className: "mb", children: editBill ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("form", { className: "form", onSubmit: saveBill, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", style: { gridColumn: "1 / -1" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("label", { children: [
+                "Legal name ",
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("small", { children: "\xB7 as registered" })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: bill.legalName, onChange: (e) => setBill({ ...bill, legalName: e.target.value }), required: true })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "f", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("label", { children: "WhatsApp number" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("input", { value: form.phone, onChange: (e) => setForm({ ...form, phone: e.target.value }), placeholder: "+91", required: true })
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", style: { gridColumn: "1 / -1" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { children: "Registered address" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: bill.address, onChange: (e) => setBill({ ...bill, address: e.target.value }), required: true })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "f", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("label", { children: "Site" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("select", { value: form.siteId, onChange: (e) => setForm({ ...form, siteId: e.target.value }), required: true, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "", children: "Choose a site" }),
-                data.sites.map((s) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: s.id, children: s.name }, s.id))
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { children: "State" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: bill.state, onChange: (e) => setBill({ ...bill, state: e.target.value }), placeholder: "e.g. Karnataka", required: true })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("label", { children: [
+                "GST number ",
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("small", { children: "\xB7 leave blank if not registered" })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: bill.gstin ?? "", onChange: (e) => setBill({ ...bill, gstin: e.target.value.toUpperCase() }), placeholder: "15 characters" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { children: "PAN" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: bill.pan ?? "", onChange: (e) => setBill({ ...bill, pan: e.target.value.toUpperCase() }) })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { children: "Bank" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: bill.bankName ?? "", onChange: (e) => setBill({ ...bill, bankName: e.target.value }), placeholder: "Bank and branch" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { children: "Account number" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: bill.accountNumber ?? "", onChange: (e) => setBill({ ...bill, accountNumber: e.target.value }) })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { children: "IFSC" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: bill.ifsc ?? "", onChange: (e) => setBill({ ...bill, ifsc: e.target.value.toUpperCase() }) })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { style: { gridColumn: "1 / -1", display: "flex", gap: 10, alignItems: "center" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "btn", type: "submit", children: "Save" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "btn ghost", type: "button", onClick: () => setEditBill(false), children: "Cancel" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "small muted", children: "These print on every invoice you raise." })
+            ] })
+          ] }) : data.partner.billing ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "row", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "main", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "t", children: data.partner.billing.legalName }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "s", children: [
+                data.partner.billing.address,
+                " \xB7 ",
+                data.partner.billing.state
+              ] })
+            ] }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "row", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "main", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "t", children: data.partner.billing.gstin ? `GSTIN ${data.partner.billing.gstin}` : "Not registered under GST" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "s", children: data.partner.billing.pan ? `PAN ${data.partner.billing.pan}` : "PAN not added" })
+            ] }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "row", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "main", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "t", children: data.partner.billing.bankName ?? "Bank not added" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "s", children: [
+                data.partner.billing.accountNumber ?? "\u2014",
+                data.partner.billing.ifsc ? ` \xB7 IFSC ${data.partner.billing.ifsc}` : ""
+              ] })
+            ] }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "small muted", style: { padding: "12px 18px", borderTop: "1px solid var(--line)" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("a", { onClick: () => setEditBill(true), style: { cursor: "pointer" }, children: "Edit these" }),
+              " \u2014 they print on every invoice you raise from Payments."
+            ] })
+          ] }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "cpad", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Empty, { title: "Not added yet", hint: "Your legal name, address, GST number and bank account. Entered once, then every invoice fills itself in." }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { style: { textAlign: "center", paddingBottom: 18 }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "btn", onClick: () => setEditBill(true), children: "Add billing details" }) })
+          ] }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Card, { title: "Add a supervisor or operator", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("form", { className: "form", onSubmit: submit, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { children: "Name" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: form.name, onChange: (e) => setForm({ ...form, name: e.target.value }), placeholder: "Full name", required: true })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { children: "WhatsApp number" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: form.phone, onChange: (e) => setForm({ ...form, phone: e.target.value }), placeholder: "+91", required: true })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { children: "Site" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("select", { value: form.siteId, onChange: (e) => setForm({ ...form, siteId: e.target.value }), required: true, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "", children: "Choose a site" }),
+                data.sites.map((s) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: s.id, children: s.name }, s.id))
               ] })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "f", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("label", { children: "Role" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("select", { value: form.role, onChange: (e) => setForm({ ...form, role: e.target.value }), children: [
-                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "operator", children: "Operator (records workers)" }),
-                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "supervisor", children: "Supervisor (runs the site)" })
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { children: "Role" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("select", { value: form.role, onChange: (e) => setForm({ ...form, role: e.target.value }), children: [
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "operator", children: "Operator (records workers)" }),
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("option", { value: "supervisor", children: "Supervisor (runs the site)" })
               ] })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { style: { gridColumn: "1 / -1", display: "flex", gap: 10, alignItems: "center" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "btn", type: "submit", disabled: !form.name.trim() || !form.phone.trim() || !form.siteId, children: "Add and send app login" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "small muted", children: "They get the Humyn app link on WhatsApp." })
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { style: { gridColumn: "1 / -1", display: "flex", gap: 10, alignItems: "center" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "btn", type: "submit", disabled: !form.name.trim() || !form.phone.trim() || !form.siteId, children: "Add and send app login" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "small muted", children: "They get the Humyn app link on WhatsApp." })
             ] })
           ] }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Card, { title: `Supervisors and operators \xB7 ${people2.length}`, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "list", children: [
-            people2.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Empty, { title: "No one added yet" }),
-            people2.map((p) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Card, { title: `Supervisors and operators \xB7 ${people2.length}`, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "list", children: [
+            people2.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Empty, { title: "No one added yet" }),
+            people2.map((p) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
               Row,
               {
                 title: p.name,
                 sub: `${p.role === "supervisor" ? "Supervisor" : "Operator"} \xB7 ${data.sites.find((s) => s.id === p.siteId)?.name ?? ""}${p.phone ? ` \xB7 ${p.phone}` : ""}`,
-                chip: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Chip, { tone: p.active ? "green" : "grey", children: p.active ? "Active" : "Deactivated" }),
-                end: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "btn ghost", style: { padding: "6px 10px", fontSize: 12 }, onClick: () => {
+                chip: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Chip, { tone: p.active ? "green" : "grey", children: p.active ? "Active" : "Deactivated" }),
+                end: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "btn ghost", style: { padding: "6px 10px", fontSize: 12 }, onClick: () => {
                   p.active = !p.active;
                   setTick(tick + 1);
                 }, children: p.active ? "Deactivate" : "Reactivate" })
@@ -14879,25 +15665,60 @@
             ))
           ] }) })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Card, { title: "Notifications", className: "mb", children: [
-            [["ops", "Site problems (no upload, low attendance)"], ["quality", "Recordings that need work"], ["hardware", "Hardware missing, damaged or idle"], ["payment", "Payment changes"]].map(([k, l]) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "toggle", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: l }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: `sw ${prefs[k] ? "on" : ""}`, onClick: () => setPrefs({ ...prefs, [k]: !prefs[k] }), "aria-label": "toggle" })
-            ] }, k)),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "toggle", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: "Send them by" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "seg", children: [["whatsapp", "WhatsApp"], ["email", "Email"], ["app", "In app"]].map(([k, l]) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: prefs.channel === k ? "on" : "", onClick: () => setPrefs({ ...prefs, channel: k }), children: l }, k)) })
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Card, { title: "Daily report", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "toggle", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: "Send me a daily report" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: `sw ${daily.on ? "on" : ""}`, onClick: () => setDaily({ ...daily, on: !daily.on }), "aria-label": "toggle" })
+            ] }),
+            daily.on && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "toggle", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: "Arrives at" }),
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "seg", children: ["07:00", "08:00", "09:00"].map((x) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: daily.time === x ? "on" : "", onClick: () => setDaily({ ...daily, time: x }), children: x }, x)) })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "toggle", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: "Send it by" }),
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "seg", children: [["email", "Email"], ["whatsapp", "WhatsApp"], ["both", "Both"]].map(([k, l]) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: daily.channel === k ? "on" : "", onClick: () => setDaily({ ...daily, channel: k }), children: l }, k)) })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "toggle", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: "Cover" }),
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "seg", children: [["all", "All live sites"], ["attention", "Only sites needing attention"]].map(([k, l]) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: daily.sites === k ? "on" : "", onClick: () => setDaily({ ...daily, sites: k }), children: l }, k)) })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "form", style: { borderTop: "1px solid var(--line)" }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "f", style: { gridColumn: "1 / -1" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("label", { children: [
+                  "Also send to ",
+                  /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("small", { children: "\xB7 optional, comma separated" })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("input", { value: daily.extra, onChange: (e) => setDaily({ ...daily, extra: e.target.value }), placeholder: "accounts@yourcompany.in" })
+              ] }) })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "small muted", style: { padding: "12px 18px", borderTop: "1px solid var(--line)" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Link, { to: "/daily", children: [
+                "See ",
+                fmtDate(yesterday()),
+                "'s report"
+              ] }),
+              " \u2014 the same thing that lands in your inbox."
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Card, { title: "Preferences", className: "mb", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "toggle", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: "Language" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "seg", children: [["en", "English"], ["hi", "\u0939\u093F\u0928\u094D\u0926\u0940"], ["ta", "\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD"]].map(([k, l]) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: prefs.lang === k ? "on" : "", onClick: () => setPrefs({ ...prefs, lang: k }), children: l }, k)) })
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Card, { title: "Notifications", className: "mb", children: [
+            [["ops", "Site problems (no upload, low attendance)"], ["quality", "Recordings that need work"], ["hardware", "Hardware missing, damaged or idle"], ["payment", "Payment changes"]].map(([k, l]) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "toggle", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: l }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: `sw ${prefs[k] ? "on" : ""}`, onClick: () => setPrefs({ ...prefs, [k]: !prefs[k] }), "aria-label": "toggle" })
+            ] }, k)),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "toggle", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: "Send them by" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "seg", children: [["whatsapp", "WhatsApp"], ["email", "Email"], ["app", "In app"]].map(([k, l]) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: prefs.channel === k ? "on" : "", onClick: () => setPrefs({ ...prefs, channel: k }), children: l }, k)) })
+            ] })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Card, { title: "Preferences", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "toggle", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: "Language" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "seg", children: [["en", "English"], ["hi", "\u0939\u093F\u0928\u094D\u0926\u0940"], ["ta", "\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD"]].map(([k, l]) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: prefs.lang === k ? "on" : "", onClick: () => setPrefs({ ...prefs, lang: k }), children: l }, k)) })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "toggle", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: "Low-bandwidth mode (no thumbnails)" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: `sw ${prefs.low ? "on" : ""}`, onClick: () => setPrefs({ ...prefs, low: !prefs.low }), "aria-label": "toggle" })
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "toggle", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: "Low-bandwidth mode (no thumbnails)" }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: `sw ${prefs.low ? "on" : ""}`, onClick: () => setPrefs({ ...prefs, low: !prefs.low }), "aria-label": "toggle" })
             ] })
           ] })
         ] })
@@ -14906,13 +15727,13 @@
   }
 
   // src/pages/Help.tsx
-  var import_react7 = __toESM(require_react(), 1);
-  var import_jsx_runtime11 = __toESM(require_jsx_runtime(), 1);
+  var import_react8 = __toESM(require_react(), 1);
+  var import_jsx_runtime13 = __toESM(require_jsx_runtime(), 1);
   var tickets = [];
   function Help() {
     const { data } = useApp();
-    const [tick, setTick] = (0, import_react7.useState)(0);
-    const [form, setForm] = (0, import_react7.useState)({ kind: "", siteId: "", text: "" });
+    const [tick, setTick] = (0, import_react8.useState)(0);
+    const [form, setForm] = (0, import_react8.useState)({ kind: "", siteId: "", text: "" });
     const live = data.sites.filter((s) => s.stage !== "closed");
     const rates = [...new Set(live.map((s) => s.ratePerHour))];
     const submit = (e) => {
@@ -14922,157 +15743,220 @@
       setForm({ kind: "", siteId: "", text: "" });
       setTick(tick + 1);
     };
-    return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(PageH, { title: "Help & SOPs", sub: "Your Humyn team, the rules of the partnership, and how to do the work right." }),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "help-grid", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Card, { title: "Your Humyn team", className: "mb", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "contact", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "avatar", children: "AK" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "main", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "t", children: "Ashutosh Kashyap" }),
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "s", children: "Your partner lead \xB7 sites, recce, hardware" })
+    return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_jsx_runtime13.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(PageH, { title: "Help & SOPs", sub: "Your Humyn team, the rules of the partnership, and how to do the work right." }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "help-grid", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(Card, { title: "Your Humyn team", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "contact", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "avatar", children: "AK" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "main", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "t", children: "Ashutosh Kashyap" }),
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "s", children: "Your partner lead \xB7 sites, recce, hardware" })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("a", { className: "btn ghost", href: "#", children: "WhatsApp" })
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("a", { className: "btn ghost", href: "#", children: "WhatsApp" })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "contact", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "avatar", children: "PS" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "main", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "t", children: "Partner Success" }),
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "s", children: "Payments, disputes, anything urgent \xB7 Mon\u2013Sat, 9 am \u2013 7 pm IST" })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "contact", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "avatar", children: "PS" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "main", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "t", children: "Partner Success" }),
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "s", children: "Payments, disputes, anything urgent \xB7 Mon\u2013Sat, 9 am \u2013 7 pm IST" })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("a", { className: "btn ghost", href: "#", children: "WhatsApp" })
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("a", { className: "btn ghost", href: "#", children: "WhatsApp" })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "contact", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "avatar", children: "HL" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "main", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "t", children: "Humyn Labs office" }),
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "s", children: "2nd Floor, Kaypee Icon, 12th Main Rd, HAL 2nd Stage, Indiranagar, Bengaluru 560008" })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "contact", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "avatar", children: "HL" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "main", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "t", children: "Humyn Labs office" }),
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "s", children: "2nd Floor, Kaypee Icon, 12th Main Rd, HAL 2nd Stage, Indiranagar, Bengaluru 560008" })
               ] })
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Card, { title: "How you get paid", className: "mb", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Rate" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(Card, { title: "How you get paid", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Rate" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { children: [
                 rates.map((r2) => fmtINR(r2)).join(" / "),
                 " per accepted hour, set per site in your agreement."
               ] })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "What counts" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Only hours Humyn accepts after review. Uploading is not accepting." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "What counts" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Only hours Humyn accepts after review. Uploading is not accepting." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "The 20-hour rule" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "A worker's hours on one task count up to 20. After that, the same worker on the same task adds nothing \u2014 move them to a task with room. Every site page shows task coverage and who is at the cap." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "The 20-hour rule" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "A worker's hours on one task count up to 20. After that, the same worker on the same task adds nothing \u2014 move them to a task with room. Every site page shows task coverage and who is at the cap." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Why" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Humyn's customers need many different people doing many different tasks, not one person doing one task for weeks. Spread is worth more than volume." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Why" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Humyn's customers need many different people doing many different tasks, not one person doing one task for weeks. Spread is worth more than volume." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Review time" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Within two working days of upload. Every rejection carries a reason and a fix." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Review time" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Within two working days of upload. Every rejection carries a reason and a fix." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Invoices" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Raised per site, per week, from accepted hours. You see the arithmetic on each invoice." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Invoices" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Raised per site, per week, from accepted hours. You see the arithmetic on each invoice." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Payout" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Scheduled invoices are paid on the next payout date. Bank reference shows on the invoice once paid." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Payout" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Scheduled invoices are paid on the next payout date. Bank reference shows on the invoice once paid." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Queries" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Raise one from the invoice; Humyn answers within three working days." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Queries" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Raise one from the invoice; Humyn answers within three working days." })
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Card, { title: "Hardware rules \xB7 from Annex A", className: "mb", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Custody" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Passes to you when you confirm receipt on the portal; back to Humyn when they confirm return." })
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(Card, { title: "How to invoice us", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "billto", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "e", children: "Bill every invoice to" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: HUMYN_BILLING.legalName }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: HUMYN_BILLING.address }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "kv", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Our GSTIN" }),
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { className: "ui", children: HUMYN_BILLING.gstin })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "kv", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Service code (SAC)" }),
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { className: "ui", children: HUMYN_BILLING.sac })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "kv", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Send it to" }),
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: HUMYN_BILLING.email })
+              ] })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Storage" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "In the lockable room recorded in the recce whenever not in use." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Use our template" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Payments \u2192 Raise an invoice fills in the accepted hours, the rate, the tax and both GST numbers for you. Check it and issue it. You can still upload your own if you'd rather." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Daily use" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Every issue to and return from an operator is logged in the HumynOperator app the same day." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "If you have a GST number" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { children: [
+                "Raise a tax invoice showing your GSTIN and ours. ",
+                GST_RATE,
+                "% GST applies \u2014 CGST + SGST if you are registered in ",
+                HUMYN_BILLING.state,
+                ", IGST if you are anywhere else in India."
+              ] })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Loss and damage" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Loss or mishandling is settled at unit value in the next payment cycle. Technical failure is on Humyn." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "If you don't have a GST number" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Raise a bill of supply with no tax, and add a line saying you are not registered under GST. Nothing else changes." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Reconcile" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Weekly against the asset register; report any gap within 24 hours." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "What every invoice must show" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Your legal name and address, your GSTIN or a not-registered line, our name, address and GSTIN, the invoice number and date, the site and the period, accepted hours \xD7 rate, tax, and the total in words." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "rule", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("b", { children: "Return" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "Within 7 days of a site closing, in the packing provided." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Hours to bill" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Only the hours Humyn has accepted for that period. Your Payments tab shows the figure; billing more only slows the payment down." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Deductions" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Lost or mishandled hardware is deducted at unit value in the next cycle, shown as a line on the invoice." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "When you get paid" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { children: [
+                HUMYN_BILLING.terms,
+                " TDS is deducted where it applies and the certificate follows each quarter."
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(Card, { title: "Hardware rules \xB7 from Annex A", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Custody" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Passes to you when you confirm receipt on the portal; back to Humyn when they confirm return." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Storage" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "In the lockable room recorded in the recce whenever not in use." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Daily use" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Every issue to and return from an operator is logged in the HumynOperator app the same day." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Loss and damage" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Loss or mishandling is settled at unit value in the next payment cycle. Technical failure is on Humyn." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Reconcile" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Weekly against the asset register; report any gap within 24 hours." })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "rule", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("b", { children: "Return" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: "Within 7 days of a site closing, in the packing provided." })
             ] })
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Card, { title: "SOPs and documents", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "list", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "Site operations SOP", sub: "How a site runs day to day \xB7 v4 \xB7 English, Hindi, Tamil", end: "PDF" }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "How to record a step", sub: "Framing, labelling, when to pause \xB7 v3 \xB7 English, Hindi, Tamil", end: "PDF" }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "Camera and SD card care", sub: "Charging, mounting, sync, storage \xB7 v2", end: "PDF" }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "Partnership agreement", sub: "Signed", end: "PDF" }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "Hardware custody schedule", sub: "Annex A \xB7 signed", end: "PDF" }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: "Packing lists", sub: "One per dispatch, with asset IDs", end: "PDF" })
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(Card, { title: "Your agreements", className: "mb", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "list", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Row, { title: "Partnership agreement", sub: `Signed ${fmtDate(data.partner.since)} \xB7 one-year term`, end: "PDF" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Row, { title: "SOW 1 \xB7 scope of work", sub: "Validation criteria, the hour cap, payment cycle", end: "PDF" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Row, { title: "Non-disclosure agreement", sub: `Signed ${fmtDate(data.partner.since)} \xB7 covers everything you see here`, end: "PDF" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Row, { title: "Hardware custody schedule", sub: "Annex A \xB7 signed at handover, one per site", end: "PDF" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "small muted", style: { padding: "12px 18px", borderTop: "1px solid var(--line)" }, children: "Signed copies, exactly as both parties signed them. Ask Partner Success for a countersigned set on letterhead." })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Card, { title: "SOPs and documents", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "list", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Row, { title: "Site operations SOP", sub: "How a site runs day to day \xB7 v4 \xB7 English, Hindi, Tamil", end: "PDF" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Row, { title: "How to record a step", sub: "Framing, labelling, when to pause \xB7 v3 \xB7 English, Hindi, Tamil", end: "PDF" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Row, { title: "Camera and SD card care", sub: "Charging, mounting, sync, storage \xB7 v2", end: "PDF" }),
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Row, { title: "Packing lists", sub: "One per dispatch, with asset IDs", end: "PDF" })
           ] }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Card, { title: "Why recordings get rejected", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "faq", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "Camera \u2014 visible, steady, lit" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "The hands and the work piece must stay in frame with enough light to see them. Tighten the head strap, tilt slightly down so the work surface sits mid-frame, and check the first minute on the phone before walking away." })
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Card, { title: "Why recordings get rejected", className: "mb", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "faq", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "Camera \u2014 visible, steady, lit" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "The hands and the work piece must stay in frame with enough light to see them. Tighten the head strap, tilt slightly down so the work surface sits mid-frame, and check the first minute on the phone before walking away." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "Task \u2014 right step, right worker" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "The step and worker chosen in the app must match the footage. Pick the step after the worker has started, and reassign the camera in the app when workers swap mid-shift." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "Task \u2014 right step, right worker" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "The step and worker chosen in the app must match the footage. Pick the step after the worker has started, and reassign the camera in the app when workers swap mid-shift." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "Coverage \u2014 full duration, no gaps" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "Idle time is not validated. Pause when work stops, resume when it restarts, and keep the power bank cable clipped so the clip does not end early." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "Coverage \u2014 full duration, no gaps" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "Idle time is not validated. Pause when work stops, resume when it restarts, and keep the power bank cable clipped so the clip does not end early." })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "How much is an hour worth to us?" }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "Each rejected hour is the site rate you do not receive. The Performance tab shows the reasons costing you the most this week and the workers who need help." })
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "How much is an hour worth to us?" }),
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "Each rejected hour is the site rate you do not receive. The Performance tab shows the reasons costing you the most this week and the workers who need help." })
             ] })
           ] }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(Card, { title: "Raise a request", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("form", { className: "form", onSubmit: submit, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "f", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("label", { children: "About" }),
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("select", { value: form.kind, onChange: (e) => setForm({ ...form, kind: e.target.value }), required: true, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { value: "", children: "Choose" }),
-                  ["Payment", "Hardware", "A rejected recording", "A site", "Operators or the app", "Something else"].map((k) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { children: k }, k))
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(Card, { title: "Raise a request", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("form", { className: "form", onSubmit: submit, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "f", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("label", { children: "About" }),
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("select", { value: form.kind, onChange: (e) => setForm({ ...form, kind: e.target.value }), required: true, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "", children: "Choose" }),
+                  ["Payment", "Hardware", "A rejected recording", "A site", "Operators or the app", "Something else"].map((k) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { children: k }, k))
                 ] })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "f", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("label", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "f", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("label", { children: [
                   "Site ",
-                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("small", { children: "\xB7 optional" })
+                  /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("small", { children: "\xB7 optional" })
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("select", { value: form.siteId, onChange: (e) => setForm({ ...form, siteId: e.target.value }), children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { value: "", children: "Not site-specific" }),
-                  live.map((s) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { value: s.id, children: s.name }, s.id))
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("select", { value: form.siteId, onChange: (e) => setForm({ ...form, siteId: e.target.value }), children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: "", children: "Not site-specific" }),
+                  live.map((s) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("option", { value: s.id, children: s.name }, s.id))
                 ] })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "f", style: { gridColumn: "1 / -1" }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("label", { children: "What do you need?" }),
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("input", { value: form.text, onChange: (e) => setForm({ ...form, text: e.target.value }), placeholder: "One or two lines is enough", required: true })
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "f", style: { gridColumn: "1 / -1" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("label", { children: "What do you need?" }),
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("input", { value: form.text, onChange: (e) => setForm({ ...form, text: e.target.value }), placeholder: "One or two lines is enough", required: true })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { style: { gridColumn: "1 / -1", display: "flex", gap: 10, alignItems: "center" }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { className: "btn", type: "submit", disabled: !form.kind || !form.text.trim(), children: "Send to Humyn" }),
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "small muted", children: "Answered within one working day, on WhatsApp and here." })
+              /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { style: { gridColumn: "1 / -1", display: "flex", gap: 10, alignItems: "center" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("button", { className: "btn", type: "submit", disabled: !form.kind || !form.text.trim(), children: "Send to Humyn" }),
+                /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: "small muted", children: "Answered within one working day, on WhatsApp and here." })
               ] })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "list", style: { borderTop: "1px solid var(--line)" }, children: [
-              tickets.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Empty, { title: "No open requests" }),
-              tickets.map((t) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Row, { title: `${t.kind}${t.siteId ? ` \xB7 ${data.sites.find((s) => s.id === t.siteId)?.name ?? ""}` : ""}`, sub: `${t.id} \xB7 ${t.text}`, chip: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Chip, { tone: t.status === "Open" ? "amber" : "green", children: t.status }) }, t.id))
+            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "list", style: { borderTop: "1px solid var(--line)" }, children: [
+              tickets.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Empty, { title: "No open requests" }),
+              tickets.map((t) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Row, { title: `${t.kind}${t.siteId ? ` \xB7 ${data.sites.find((s) => s.id === t.siteId)?.name ?? ""}` : ""}`, sub: `${t.id} \xB7 ${t.text}`, chip: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Chip, { tone: t.status === "Open" ? "amber" : "green", children: t.status }) }, t.id))
             ] })
           ] })
         ] })
@@ -15081,9 +15965,9 @@
   }
 
   // src/App.tsx
-  var import_jsx_runtime12 = __toESM(require_jsx_runtime(), 1);
-  var Ctx2 = (0, import_react8.createContext)({ data: dataset });
-  var useApp = () => (0, import_react8.useContext)(Ctx2);
+  var import_jsx_runtime14 = __toESM(require_jsx_runtime(), 1);
+  var Ctx2 = (0, import_react9.createContext)({ data: dataset });
+  var useApp = () => (0, import_react9.useContext)(Ctx2);
   var TABS = [
     { to: "/sites", label: "Sites" },
     { to: "/payments", label: "Payments" },
@@ -15092,50 +15976,50 @@
     { to: "/help", label: "Help & SOPs" }
   ];
   var HOME = "/sites";
-  var activeTab = (path) => path.startsWith("/payments") ? "/payments" : path.startsWith("/performance") ? "/performance" : path.startsWith("/help") ? "/help" : path.startsWith("/hardware") ? "/hardware" : path.startsWith("/profile") ? "" : "/sites";
+  var activeTab = (path) => path.startsWith("/payments") ? "/payments" : path.startsWith("/performance") ? "/performance" : path.startsWith("/help") ? "/help" : path.startsWith("/hardware") ? "/hardware" : path.startsWith("/profile") || path.startsWith("/daily") ? "" : "/sites";
   var KIND_COLOUR = { ops: "#C43D2F", quality: "#D98E04", hardware: "#383532", payment: "#2F8F5B" };
   var ago = (m) => m < 60 ? `${m} min ago` : m < 1440 ? `${Math.floor(m / 60)} h ago` : `${Math.floor(m / 1440)} d ago`;
   function Shell({ children }) {
     const { data } = useApp();
     const { path } = useRoute();
-    const [open, setOpen] = (0, import_react8.useState)(false);
+    const [open, setOpen] = (0, import_react9.useState)(false);
     const unread = data.notices.filter((n2) => !n2.resolved).length;
-    return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("header", { className: "hdr", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "hdr-in", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Link, { to: HOME, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("img", { src: "/humyn-logo.svg", alt: "Humyn Labs" }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("nav", { className: "tabs", children: TABS.map((t) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Link, { to: t.to, className: `tab ${activeTab(path) === t.to ? "on" : ""}`, children: t.label }, t.to)) }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "hdr-right", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Link, { to: "/profile", className: `who ${path.startsWith("/profile") ? "on" : ""}`, title: "Your profile", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("b", { children: data.partner.ownerName }),
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: data.partner.org })
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(import_jsx_runtime14.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("header", { className: "hdr", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "hdr-in", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Link, { to: HOME, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("img", { src: "/humyn-logo.svg", alt: "Humyn Labs" }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("nav", { className: "tabs", children: TABS.map((t) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Link, { to: t.to, className: `tab ${activeTab(path) === t.to ? "on" : ""}`, children: t.label }, t.to)) }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "hdr-right", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(Link, { to: "/profile", className: `who ${path.startsWith("/profile") ? "on" : ""}`, title: "Your profile", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("b", { children: data.partner.ownerName }),
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { children: data.partner.org })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("button", { className: "bell", "aria-label": "Notifications", onClick: () => setOpen((o) => !o), children: [
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("path", { d: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" }),
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("path", { d: "M13.7 21a2 2 0 0 1-3.4 0" })
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("button", { className: "bell", "aria-label": "Notifications", onClick: () => setOpen((o) => !o), children: [
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" }),
+              /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M13.7 21a2 2 0 0 1-3.4 0" })
             ] }),
-            unread > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("b", { children: unread })
+            unread > 0 && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("b", { children: unread })
           ] })
         ] })
       ] }) }),
-      open && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("aside", { className: "drawer", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "card-h", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h3", { children: "Notifications" }),
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("a", { onClick: () => setOpen(false), style: { cursor: "pointer" }, children: "Close" })
+      open && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("aside", { className: "drawer", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "card-h", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("h3", { children: "Notifications" }),
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("a", { onClick: () => setOpen(false), style: { cursor: "pointer" }, children: "Close" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "list", children: data.notices.map((n2) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(Link, { to: n2.href, className: "row", onClick: () => setOpen(false), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "kind", style: { background: KIND_COLOUR[n2.kind], opacity: n2.resolved ? 0.3 : 1, alignSelf: "flex-start" } }),
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "main", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: n2.resolved ? "muted" : "t", children: n2.text }),
-            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "s", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "list", children: data.notices.map((n2) => /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(Link, { to: n2.href, className: "row", onClick: () => setOpen(false), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "kind", style: { background: KIND_COLOUR[n2.kind], opacity: n2.resolved ? 0.3 : 1, alignSelf: "flex-start" } }),
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "main", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: n2.resolved ? "muted" : "t", children: n2.text }),
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "s", children: [
               ago(n2.minutesAgo),
               n2.resolved ? " \xB7 resolved" : ""
             ] })
           ] })
         ] }, n2.id)) })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Crumbs, {}),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("main", { children })
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Crumbs, {}),
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("main", { children })
     ] });
   }
   function Crumbs() {
@@ -15165,51 +16049,57 @@
       }
       parts.push({ label: m.id });
     } else if (m = match("/performance/reason/:i", path)) parts.push({ to: "/performance", label: "Performance" }, { label: "Needs work" });
+    else if (path === "/performance/operators") parts.push({ to: "/performance", label: "Performance" }, { label: "Operators" });
+    else if (m = match("/performance/operator/:id", path)) parts.push({ to: "/performance", label: "Performance" }, { to: "/performance/operators", label: "Operators" }, { label: person(m.id)?.name ?? "Operator" });
+    else if (path === "/daily") parts.push({ to: "/sites", label: data.partner.org }, { label: "Daily report" });
     else if (m = match("/hardware/:id", path)) parts.push({ to: "/hardware", label: "Hardware" }, { label: site(m.id)?.name ?? m.id });
     else if (path === "/profile") parts.push({ to: "/sites", label: data.partner.org }, { label: "Your profile" });
-    if (parts.length < 2) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "crumbs" });
-    return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "crumbs", children: parts.map((p, i) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { style: { display: "contents" }, children: [
-      i > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "sep", children: "\u203A" }),
-      p.to && i < parts.length - 1 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Link, { to: p.to, children: p.label }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: "cur", children: p.label })
+    if (parts.length < 2) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "crumbs" });
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "crumbs", children: parts.map((p, i) => /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("span", { style: { display: "contents" }, children: [
+      i > 0 && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "sep", children: "\u203A" }),
+      p.to && i < parts.length - 1 ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Link, { to: p.to, children: p.label }) : /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: "cur", children: p.label })
     ] }, i)) });
   }
   function Routes() {
     const { path, go } = useRoute();
-    (0, import_react8.useEffect)(() => {
+    (0, import_react9.useEffect)(() => {
       if (path === "/") go(HOME, true);
     }, [path, go]);
     let m;
-    if (path === "/payments") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Payments, {});
-    if (m = match("/payments/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Invoice, { id: m.id });
-    if (path === "/sites") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Sites, {});
-    if (m = match("/sites/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SiteDetail, { id: m.id });
-    if (m = match("/sites/:id/people", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SitePeople, { id: m.id });
-    if (m = match("/sites/:id/hardware", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SiteHardware, { id: m.id });
-    if (m = match("/sites/:id/today", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SiteToday, { id: m.id });
-    if (m = match("/sites/:id/step/:step", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(StepDetail, { id: m.id, step: m.step });
-    if (m = match("/sites/:id/supervisor/:sup", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SupervisorPage, { siteId: m.id, id: m.sup });
-    if (m = match("/sites/:id/operator/:op", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(OperatorPage, { siteId: m.id, id: m.op });
-    if (m = match("/sites/:id/operator/:op/worker/:w", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(WorkerPage, { siteId: m.id, opId: m.op, id: m.w });
-    if (m = match("/recording/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(RecordingPage, { id: m.id });
-    if (path === "/hardware") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Hardware, {});
-    if (m = match("/hardware/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SiteHardware, { id: m.id });
-    if (path === "/performance") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Performance, {});
-    if (m = match("/performance/reason/:i", path)) return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(ReasonList, { index: Number(m.i) });
-    if (path === "/profile") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Profile, {});
-    if (path === "/help") return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Help, {});
-    return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "empty", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("b", { children: "Page not found" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Link, { to: HOME, children: "Go to Sites" })
+    if (path === "/payments") return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Payments, {});
+    if (m = match("/payments/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Invoice, { id: m.id });
+    if (path === "/sites") return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Sites, {});
+    if (m = match("/sites/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(SiteDetail, { id: m.id });
+    if (m = match("/sites/:id/people", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(SitePeople, { id: m.id });
+    if (m = match("/sites/:id/hardware", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(SiteHardware, { id: m.id });
+    if (m = match("/sites/:id/today", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(SiteToday, { id: m.id });
+    if (m = match("/sites/:id/step/:step", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(StepDetail, { id: m.id, step: m.step });
+    if (m = match("/sites/:id/supervisor/:sup", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(SupervisorPage, { siteId: m.id, id: m.sup });
+    if (m = match("/sites/:id/operator/:op", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(OperatorPage, { siteId: m.id, id: m.op });
+    if (m = match("/sites/:id/operator/:op/worker/:w", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(WorkerPage, { siteId: m.id, opId: m.op, id: m.w });
+    if (m = match("/recording/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(RecordingPage, { id: m.id });
+    if (path === "/hardware") return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Hardware, {});
+    if (m = match("/hardware/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(SiteHardware, { id: m.id });
+    if (path === "/performance") return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Performance, {});
+    if (path === "/performance/operators") return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Operators, {});
+    if (m = match("/performance/operator/:id", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(OperatorReport, { id: m.id });
+    if (path === "/daily") return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Daily, {});
+    if (m = match("/performance/reason/:i", path)) return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(ReasonList, { index: Number(m.i) });
+    if (path === "/profile") return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Profile, {});
+    if (path === "/help") return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Help, {});
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "empty", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("b", { children: "Page not found" }),
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Link, { to: HOME, children: "Go to Sites" })
     ] });
   }
   function App() {
-    return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Router, { children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Ctx2.Provider, { value: { data: dataset }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Shell, { children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Routes, {}) }) }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Router, { children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Ctx2.Provider, { value: { data: dataset }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Shell, { children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Routes, {}) }) }) });
   }
 
   // src/main.tsx
-  var import_jsx_runtime13 = __toESM(require_jsx_runtime(), 1);
+  var import_jsx_runtime15 = __toESM(require_jsx_runtime(), 1);
   (0, import_client.createRoot)(document.getElementById("root")).render(
-    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(import_react9.StrictMode, { children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(App, {}) })
+    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(import_react10.StrictMode, { children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(App, {}) })
   );
 })();
 /*! Bundled license information:

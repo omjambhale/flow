@@ -1410,3 +1410,136 @@ table.tbl {
   padding: 0 14px;
   font-size: 14px;
 }
+.billto {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+}
+.billto .e {
+  font-family: var(--ui);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--soft);
+  margin-bottom: 4px;
+}
+.billto b {
+  font-size: 16px;
+  color: var(--ink);
+}
+.billto span {
+  font-size: 14px;
+  color: var(--mid);
+  line-height: 1.5;
+}
+.billto .kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+  font-size: 14px;
+}
+.billto .kv span {
+  color: var(--mid);
+}
+.inv-sheet {
+  padding: 22px 18px 4px;
+}
+.inv-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr 200px;
+  gap: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.inv-head .e,
+.inv-foot .e {
+  font-family: var(--ui);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--soft);
+  margin-bottom: 5px;
+}
+.inv-head b {
+  display: block;
+  font-size: 15px;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+.inv-head span {
+  display: block;
+  font-size: 13.5px;
+  color: var(--mid);
+  line-height: 1.5;
+}
+.inv-head span span {
+  display: inline;
+}
+.inv-meta .kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13.5px;
+  padding: 3px 0;
+}
+.inv-meta .kv span {
+  color: var(--mid);
+}
+.inv-meta .kv b {
+  display: inline;
+  font-size: 13.5px;
+}
+.tbl.inv-lines {
+  margin-top: 4px;
+}
+.inv-foot {
+  display: grid;
+  gap: 14px;
+  padding: 16px 0 18px;
+  border-top: 1px solid var(--line);
+}
+.inv-foot b {
+  font-size: 14.5px;
+  color: var(--ink);
+}
+.inv-foot span {
+  font-size: 13.5px;
+  color: var(--mid);
+}
+.inv-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--warm);
+}
+@media (max-width: 900px) {
+  .inv-head {
+    grid-template-columns: 1fr;
+  }
+}
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #inv-sheet,
+  #inv-sheet * {
+    visibility: visible;
+  }
+  #inv-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+  }
+  .inv-actions {
+    display: none;
+  }
+}

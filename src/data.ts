@@ -160,6 +160,14 @@ for (const [i, s] of sites.entries()) {
     }
   }
 }
+// One operator also covers two tasks at the other site — partners move operators between sites,
+// and the operator report has to add up across them.
+const roamer = operators.HL021?.[0]
+if (roamer) {
+  operators.HL014.push(roamer)
+  people.filter(p => p.role === 'worker' && p.siteId === 'HL014').slice(0, 2).forEach(w => { w.reportsTo = roamer })
+}
+
 // one deactivated operator, to show the state
 people.push({ id: `P${++n}`, name: 'Sanjay V', role: 'operator', siteId: 'HL014', reportsTo: supervisors.HL014, active: false })
 
@@ -234,7 +242,7 @@ const makeRecordings = (site: Site, weeks: number, perDay: number, rejectRate: n
   for (let d = weeks * 7 - 1 + lagDays; d >= lagDays; d--) {
     for (let k = 0; k < perDay; k++) {
       const op = pick(ops)
-      const wk = pick(people.filter(p => p.reportsTo === op))
+      const wk = pick(people.filter(p => p.reportsTo === op && p.siteId === site.id))
       const st = pick(stepsFor(site, wk.id))
       const tk = pick(st.tasks)
       const minutes = between(25, 95)
@@ -303,6 +311,19 @@ const notices: Notice[] = [
 ]
 
 export const dataset: Dataset = {
-  partner: { id: 'PRT-0042', org: 'Shakti Precision', ownerName: 'Meera Iyer', email: 'meera@shaktiprecision.in', phone: '+91 98450 12345', since: '2026-06-30' },
+  partner: {
+    id: 'PRT-0042', org: 'Shakti Precision', ownerName: 'Meera Iyer',
+    email: 'meera@shaktiprecision.in', phone: '+91 98450 12345', since: '2026-06-30',
+    billing: {
+      legalName: 'Shakti Precision Works Private Limited',
+      address: '14/2 Industrial Suburb, Yeshwanthpur, Bengaluru 560022',
+      state: 'Karnataka',
+      gstin: '29ABCDE1234F1Z5',
+      pan: 'ABCDE1234F',
+      bankName: 'HDFC Bank, Yeshwanthpur',
+      accountNumber: '50100XXXXXX789',
+      ifsc: 'HDFC0000123',
+    },
+  },
   sites, people, assets, recordings, invoices, notices,
 }

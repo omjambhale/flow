@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useApp } from '../App'
 import { Card, Chip, Empty, PageH, Row } from '../components/ui'
-import { fmtINR } from '../derive'
+import { HUMYN_BILLING, GST_RATE, fmtDate, fmtINR } from '../derive'
 
 interface Ticket { id: string; kind: string; siteId: string; text: string; status: 'Open' | 'Answered' }
 const tickets: Ticket[] = []
@@ -41,6 +41,24 @@ export function Help() {
             <div className="rule"><b>Queries</b><span>Raise one from the invoice; Humyn answers within three working days.</span></div>
           </Card>
 
+          <Card title="How to invoice us" className="mb">
+            <div className="billto">
+              <div className="e">Bill every invoice to</div>
+              <b>{HUMYN_BILLING.legalName}</b>
+              <span>{HUMYN_BILLING.address}</span>
+              <div className="kv"><span>Our GSTIN</span><b className="ui">{HUMYN_BILLING.gstin}</b></div>
+              <div className="kv"><span>Service code (SAC)</span><b className="ui">{HUMYN_BILLING.sac}</b></div>
+              <div className="kv"><span>Send it to</span><b>{HUMYN_BILLING.email}</b></div>
+            </div>
+            <div className="rule"><b>Use our template</b><span>Payments → Raise an invoice fills in the accepted hours, the rate, the tax and both GST numbers for you. Check it and issue it. You can still upload your own if you'd rather.</span></div>
+            <div className="rule"><b>If you have a GST number</b><span>Raise a tax invoice showing your GSTIN and ours. {GST_RATE}% GST applies — CGST + SGST if you are registered in {HUMYN_BILLING.state}, IGST if you are anywhere else in India.</span></div>
+            <div className="rule"><b>If you don't have a GST number</b><span>Raise a bill of supply with no tax, and add a line saying you are not registered under GST. Nothing else changes.</span></div>
+            <div className="rule"><b>What every invoice must show</b><span>Your legal name and address, your GSTIN or a not-registered line, our name, address and GSTIN, the invoice number and date, the site and the period, accepted hours × rate, tax, and the total in words.</span></div>
+            <div className="rule"><b>Hours to bill</b><span>Only the hours Humyn has accepted for that period. Your Payments tab shows the figure; billing more only slows the payment down.</span></div>
+            <div className="rule"><b>Deductions</b><span>Lost or mishandled hardware is deducted at unit value in the next cycle, shown as a line on the invoice.</span></div>
+            <div className="rule"><b>When you get paid</b><span>{HUMYN_BILLING.terms} TDS is deducted where it applies and the certificate follows each quarter.</span></div>
+          </Card>
+
           <Card title="Hardware rules · from Annex A" className="mb">
             <div className="rule"><b>Custody</b><span>Passes to you when you confirm receipt on the portal; back to Humyn when they confirm return.</span></div>
             <div className="rule"><b>Storage</b><span>In the lockable room recorded in the recce whenever not in use.</span></div>
@@ -52,13 +70,23 @@ export function Help() {
         </div>
 
         <div>
+          <Card title="Your agreements" className="mb">
+            <div className="list">
+              <Row title="Partnership agreement" sub={`Signed ${fmtDate(data.partner.since)} · one-year term`} end="PDF" />
+              <Row title="SOW 1 · scope of work" sub="Validation criteria, the hour cap, payment cycle" end="PDF" />
+              <Row title="Non-disclosure agreement" sub={`Signed ${fmtDate(data.partner.since)} · covers everything you see here`} end="PDF" />
+              <Row title="Hardware custody schedule" sub="Annex A · signed at handover, one per site" end="PDF" />
+            </div>
+            <div className="small muted" style={{ padding: '12px 18px', borderTop: '1px solid var(--line)' }}>
+              Signed copies, exactly as both parties signed them. Ask Partner Success for a countersigned set on letterhead.
+            </div>
+          </Card>
+
           <Card title="SOPs and documents" className="mb">
             <div className="list">
               <Row title="Site operations SOP" sub="How a site runs day to day · v4 · English, Hindi, Tamil" end="PDF" />
               <Row title="How to record a step" sub="Framing, labelling, when to pause · v3 · English, Hindi, Tamil" end="PDF" />
               <Row title="Camera and SD card care" sub="Charging, mounting, sync, storage · v2" end="PDF" />
-              <Row title="Partnership agreement" sub="Signed" end="PDF" />
-              <Row title="Hardware custody schedule" sub="Annex A · signed" end="PDF" />
               <Row title="Packing lists" sub="One per dispatch, with asset IDs" end="PDF" />
             </div>
           </Card>

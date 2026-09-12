@@ -7,6 +7,8 @@ import { Sites, SiteDetail, StepDetail, SiteHardware, SiteToday, SitePeople } fr
 import { OperatorPage, WorkerPage, SupervisorPage } from './pages/People'
 import { RecordingPage } from './pages/Recording'
 import { Performance, ReasonList } from './pages/Performance'
+import { Operators, OperatorReport } from './pages/Operators'
+import { Daily } from './pages/Daily'
 import { Hardware } from './pages/Hardware'
 import { Profile } from './pages/Profile'
 import { Help } from './pages/Help'
@@ -25,7 +27,7 @@ const TABS = [
 const HOME = '/sites'
 
 const activeTab = (path: string) =>
-  path.startsWith('/payments') ? '/payments' : path.startsWith('/performance') ? '/performance' : path.startsWith('/help') ? '/help' : path.startsWith('/hardware') ? '/hardware' : path.startsWith('/profile') ? '' : '/sites'
+  path.startsWith('/payments') ? '/payments' : path.startsWith('/performance') ? '/performance' : path.startsWith('/help') ? '/help' : path.startsWith('/hardware') ? '/hardware' : path.startsWith('/profile') || path.startsWith('/daily') ? '' : '/sites'
 
 const KIND_COLOUR = { ops: '#C43D2F', quality: '#D98E04', hardware: '#383532', payment: '#2F8F5B' }
 const ago = (m: number) => m < 60 ? `${m} min ago` : m < 1440 ? `${Math.floor(m / 60)} h ago` : `${Math.floor(m / 1440)} d ago`
@@ -99,6 +101,9 @@ function Crumbs() {
     }
     parts.push({ label: m.id })
   } else if ((m = match('/performance/reason/:i', path))) parts.push({ to: '/performance', label: 'Performance' }, { label: 'Needs work' })
+  else if (path === '/performance/operators') parts.push({ to: '/performance', label: 'Performance' }, { label: 'Operators' })
+  else if ((m = match('/performance/operator/:id', path))) parts.push({ to: '/performance', label: 'Performance' }, { to: '/performance/operators', label: 'Operators' }, { label: person(m.id)?.name ?? 'Operator' })
+  else if (path === '/daily') parts.push({ to: '/sites', label: data.partner.org }, { label: 'Daily report' })
   else if ((m = match('/hardware/:id', path))) parts.push({ to: '/hardware', label: 'Hardware' }, { label: site(m.id)?.name ?? m.id })
   else if (path === '/profile') parts.push({ to: '/sites', label: data.partner.org }, { label: 'Your profile' })
   if (parts.length < 2) return <div className="crumbs" />
@@ -133,6 +138,9 @@ function Routes() {
   if (path === '/hardware') return <Hardware />
   if ((m = match('/hardware/:id', path))) return <SiteHardware id={m.id} />
   if (path === '/performance') return <Performance />
+  if (path === '/performance/operators') return <Operators />
+  if ((m = match('/performance/operator/:id', path))) return <OperatorReport id={m.id} />
+  if (path === '/daily') return <Daily />
   if ((m = match('/performance/reason/:i', path))) return <ReasonList index={Number(m.i)} />
   if (path === '/profile') return <Profile />
   if (path === '/help') return <Help />

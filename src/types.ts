@@ -160,6 +160,20 @@ export interface Partner {
   email: string
   phone: string
   since: string
+  /** billing details the partner fills in once; they print on every invoice */
+  billing?: PartnerBilling
+}
+
+export interface PartnerBilling {
+  legalName: string
+  address: string
+  state: string
+  /** GST number, or undefined when the partner is not registered */
+  gstin?: string
+  pan?: string
+  bankName?: string
+  accountNumber?: string
+  ifsc?: string
 }
 
 export interface Dataset {

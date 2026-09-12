@@ -213,6 +213,42 @@ export const cameraOutput = (d: Dataset, recs = d.recordings) =>
     return { asset: a, hours: hrs(mine.reduce((s, r) => s + r.minutes, 0)), recordings: mine.length, acceptance: summarise(mine).acceptance }
   })
 
+/** One operator, across every site they have recorded at. A partner controls operators, so this is
+ *  the level at which they can actually fix quality. */
+export interface OperatorStat {
+  id: string; name: string; active: boolean; homeSiteId: string; siteIds: string[]
+  recordings: number; acceptedHours: number; rejectedHours: number; rejectedAmount: number
+  acceptance: number; quality: number; workers: number; cameras: number
+  mainIssue?: string; lastDate: string
+}
+
+export const operatorStats = (d: Dataset, recs = d.recordings): OperatorStat[] =>
+  d.people.filter(p => p.role === 'operator').map(p => {
+    const mine = recs.filter(r => r.operatorId === p.id)
+    const s = summarise(mine)
+    const rejectedAmount = mine.filter(r => r.status === 'rejected')
+      .reduce((sum, r) => sum + r.minutes / 60 * (d.sites.find(x => x.id === r.siteId)?.ratePerHour ?? 0), 0)
+    return {
+      id: p.id, name: p.name, active: p.active, homeSiteId: p.siteId,
+      siteIds: [...new Set([p.siteId, ...mine.map(r => r.siteId)])].filter(Boolean),
+      recordings: mine.length, acceptedHours: s.acceptedHours, rejectedHours: s.rejectedHours, rejectedAmount,
+      acceptance: s.acceptance, quality: qualityScore(mine),
+      workers: new Set(mine.map(r => r.workerId)).size,
+      cameras: new Set(mine.map(r => r.cameraId)).size,
+      mainIssue: byReason(mine)[0]?.reason, lastDate: mine.map(r => r.date).sort().pop() ?? '',
+    }
+  })
+
+/** the same operator, split by the sites they work at */
+export const operatorBySite = (d: Dataset, operatorId: string, recs = d.recordings) => {
+  const mine = recs.filter(r => r.operatorId === operatorId)
+  return [...new Set(mine.map(r => r.siteId))].map(siteId => {
+    const at = mine.filter(r => r.siteId === siteId)
+    const s = summarise(at)
+    return { site: d.sites.find(x => x.id === siteId)!, ...s, quality: qualityScore(at), recordings: at.length }
+  }).filter(x => x.site)
+}
+
 export const assetsAtRisk = (d: Dataset, siteId?: string) =>
   d.assets.filter(a => (!siteId || a.siteId === siteId) && (a.status === 'missing' || a.status === 'damaged'))
 export const assetValue = (list: { value: number }[]) => list.reduce((s, a) => s + a.value, 0)
@@ -251,4 +287,108 @@ export const taskCoverage = (d: Dataset, site: Site) => {
       underCap: rows.filter(x => x.room > 0).length, room: Math.round(rows.reduce((s, x) => s + x.room, 0) * 10) / 10,
     }
   }))
+}
+
+
+/* ----- invoicing -----
+   Humyn's own details print in the bill-to block of every partner invoice.
+   XXX values are placeholders for finance to confirm before this goes live. */
+export const HUMYN_BILLING = {
+  legalName: 'Humynai Private Limited',
+  address: '837/1 Binnamangala, 1st Stage, 100 ft Road, Indiranagar, Bengaluru 560038, Karnataka',
+  state: 'Karnataka',
+  gstin: '29XXXXXXXXXXXZX',
+  sac: '998319',
+  email: 'invoices@humynlabs.ai',
+  terms: 'Paid on the next 15-day cycle after Humyn approves the hours.',
+}
+export const GST_RATE = 18
+
+export interface TaxLine { label: string; rate: number; amount: number }
+/** CGST + SGST inside Karnataka, IGST everywhere else in India. No tax lines when the partner is not GST-registered. */
+export const gstLines = (taxable: number, partnerState?: string, gstin?: string): TaxLine[] => {
+  if (!gstin) return []
+  const half = GST_RATE / 2
+  return (partnerState ?? '').trim().toLowerCase() === HUMYN_BILLING.state.toLowerCase()
+    ? [{ label: 'CGST', rate: half, amount: taxable * half / 100 }, { label: 'SGST', rate: half, amount: taxable * half / 100 }]
+    : [{ label: 'IGST', rate: GST_RATE, amount: taxable * GST_RATE / 100 }]
+}
+
+/* ----- daily report ----- */
+export interface DailyLine {
+  site: Site; hours: number; recordings: number; acceptedHours: number; rejectedHours: number
+  present: number; scheduled: number; acceptance: number; uploadLagMin: number
+}
+export interface DailyReport {
+  date: string; hours: number; acceptedHours: number; rejectedHours: number; amount: number
+  actions: { site: string; text: string; href: string }[]
+  sites: DailyLine[]
+}
+
+export const yesterday = (from = TODAY) => {
+  const d = new Date(from + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
+
+/** One day across every live site: what happened, and what needs the partner today. */
+export const dailyReport = (d: Dataset, date: string): DailyReport => {
+  const live = d.sites.filter(s => s.stage === 'live')
+  const sites: DailyLine[] = live.map(site => {
+    const day = d.recordings.filter(r => r.siteId === site.id && r.date === date)
+    const s = summarise(day)
+    const week = summarise(thisWeek(siteRecordings(d, site.id)))
+    return {
+      site, hours: hrs(day.reduce((sum, r) => sum + r.minutes, 0)), recordings: day.length,
+      acceptedHours: s.acceptedHours, rejectedHours: s.rejectedHours,
+      present: site.presentToday, scheduled: site.scheduledToday,
+      acceptance: week.acceptance, uploadLagMin: site.uploadLagMin,
+    }
+  })
+  const actions: DailyReport['actions'] = []
+  live.forEach(site => attentionReasons(d, site).forEach(text =>
+    actions.push({ site: shortName(site.name), text, href: `/sites/${site.id}` })))
+  d.invoices.filter(i => i.query).forEach(i =>
+    actions.push({ site: shortName(d.sites.find(s => s.id === i.siteId)?.name ?? ''), text: `Query open on invoice ${i.number}`, href: `/payments/${i.id}` }))
+  const all = d.recordings.filter(r => r.date === date)
+  const sum = summarise(all)
+  return {
+    date,
+    hours: hrs(all.reduce((s, r) => s + r.minutes, 0)),
+    acceptedHours: sum.acceptedHours, rejectedHours: sum.rejectedHours,
+    amount: all.filter(isGood).reduce((s, r) => s + r.minutes / 60 * (d.sites.find(x => x.id === r.siteId)?.ratePerHour ?? 0), 0),
+    actions, sites,
+  }
+}
+
+/** Indian-format amount in words, which a tax invoice has to carry. */
+export const inWords = (n: number): string => {
+  const a = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve',
+    'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen']
+  const b = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety']
+  const two = (x: number): string => x < 20 ? a[x] : b[Math.floor(x / 10)] + (x % 10 ? '-' + a[x % 10] : '')
+  const three = (x: number): string => x >= 100 ? `${a[Math.floor(x / 100)]} hundred${x % 100 ? ' ' + two(x % 100) : ''}` : two(x)
+  let r = Math.round(n)
+  if (r === 0) return 'Zero rupees only'
+  const parts: string[] = []
+  const cr = Math.floor(r / 10000000); r %= 10000000
+  const lk = Math.floor(r / 100000); r %= 100000
+  const th = Math.floor(r / 1000); r %= 1000
+  if (cr) parts.push(`${three(cr)} crore`)
+  if (lk) parts.push(`${three(lk)} lakh`)
+  if (th) parts.push(`${three(th)} thousand`)
+  if (r) parts.push(three(r))
+  const t = parts.join(' ')
+  return t.charAt(0).toUpperCase() + t.slice(1) + ' rupees only'
+}
+
+/** the last n seven-day windows ending yesterday, for invoice periods */
+export const recentPeriods = (n = 4) => {
+  const out: { from: string; to: string; label: string }[] = []
+  for (let i = 0; i < n; i++) {
+    const to = new Date(TODAY + 'T00:00:00Z'); to.setUTCDate(to.getUTCDate() - 1 - i * 7)
+    const from = new Date(to); from.setUTCDate(from.getUTCDate() - 6)
+    const f = from.toISOString().slice(0, 10), t = to.toISOString().slice(0, 10)
+    out.push({ from: f, to: t, label: `${fmtDate(f)} – ${fmtDate(t)}` })
+  }
+  return out
 }
